@@ -4,6 +4,25 @@ const { getSupabaseAdmin, getSupabasePublic } = require("../lib/clients");
 
 const router = express.Router();
 
+const COLUMNS =
+  "id, full_name, phone, selected_domain, language, designation, organization, country, " +
+  "state_region, constituency, public_contact, website_template, social_channels, " +
+  "vrm_requested, created_at, updated_at";
+
+// request field -> [column, max length]. Only these can be written by a client.
+const TEXT_FIELDS = {
+  full_name: ["full_name", 120],
+  selected_domain: ["selected_domain", 253],
+  language: ["language", 10],
+  designation: ["designation", 120],
+  organization: ["organization", 160],
+  country: ["country", 80],
+  state_region: ["state_region", 80],
+  constituency: ["constituency", 120],
+  public_contact: ["public_contact", 160],
+  website_template: ["website_template", 60],
+};
+
 // Validates the Supabase access token from the Authorization header.
 async function requireUser(req, res, next) {
   try {
@@ -25,7 +44,7 @@ router.get("/", requireUser, async (req, res, next) => {
   try {
     const { data, error } = await getSupabaseAdmin()
       .from("profiles")
-      .select("id, full_name, phone, selected_domain, language, created_at, updated_at")
+      .select(COLUMNS)
       .eq("id", req.user.id)
       .maybeSingle();
     if (error) throw error;
@@ -38,16 +57,24 @@ router.get("/", requireUser, async (req, res, next) => {
 router.put("/", requireUser, async (req, res, next) => {
   try {
     const body = req.body || {};
-    const update = { id: req.user.id, phone: req.user.phone ? `+${req.user.phone.replace("+", "")}` : null };
+    const phone = req.user.phone ? `+${String(req.user.phone).replace("+", "")}` : null;
+    const update = { id: req.user.id, phone };
 
-    if (typeof body.full_name === "string") update.full_name = body.full_name.trim().slice(0, 120);
-    if (typeof body.selected_domain === "string") update.selected_domain = body.selected_domain.trim().slice(0, 253);
-    if (typeof body.language === "string") update.language = body.language.trim().slice(0, 10);
+    for (const [field, [column, max]] of Object.entries(TEXT_FIELDS)) {
+      if (typeof body[field] === "string") update[column] = body[field].trim().slice(0, max);
+    }
+    if (Array.isArray(body.social_channels)) {
+      update.social_channels = body.social_channels
+        .filter((c) => typeof c === "string")
+        .map((c) => c.trim().slice(0, 40))
+        .slice(0, 20);
+    }
+    if (typeof body.vrm_requested === "boolean") update.vrm_requested = body.vrm_requested;
 
     const { data, error } = await getSupabaseAdmin()
       .from("profiles")
       .upsert(update, { onConflict: "id" })
-      .select()
+      .select(COLUMNS)
       .single();
     if (error) throw error;
     res.json({ profile: data });

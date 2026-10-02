@@ -65,13 +65,21 @@ router.post("/otp/send", otpLimiter, async (req, res, next) => {
     const phone = normalizePhone(req.body && req.body.phone);
     if (!phone) return res.status(400).json({ error: "invalid_phone" });
 
-    await verifyService().verifications.create({ to: phone, channel: "sms" });
-    res.json({ status: "sent" });
+    const requested = req.body && req.body.channel;
+    const channel = requested === "whatsapp" ? "whatsapp" : "sms";
+
+    await verifyService().verifications.create({ to: phone, channel });
+    res.json({ status: "sent", channel });
   } catch (err) {
     if (err.status === 429) return res.status(429).json({ error: "too_many_requests" });
     // Twilio trial accounts can only text numbers verified in the Twilio console.
     if (err.code === 21608 || /verified tester|unverified/i.test(err.message || "")) {
       return res.status(403).json({ error: "number_not_verified" });
+    }
+    // WhatsApp must be enabled on the Twilio Verify service; fall back guidance for the app.
+    if (req.body && req.body.channel === "whatsapp" && (err.status === 400 || err.status === 404)) {
+      console.error(`WhatsApp channel unavailable: ${err.code} ${err.message}`);
+      return res.status(400).json({ error: "channel_unavailable" });
     }
     if (err.status === 400) return res.status(400).json({ error: "invalid_phone" });
     next(err);

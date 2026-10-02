@@ -1,13 +1,59 @@
+require("dotenv").config();
+
 const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+
+const authRoutes = require("./routes/auth");
+const profileRoutes = require("./routes/profile");
 
 const app = express();
 const port = process.env.PORT || 5000;
+
+// Railway sits behind a proxy; needed for correct client IPs in rate limiting.
+app.set("trust proxy", 1);
+
+app.use(helmet());
+app.use(express.json({ limit: "100kb" }));
+
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Allow non-browser clients (no Origin header) and listed origins.
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error("Origin not allowed"));
+    },
+  })
+);
+
+app.use("/api", rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false }));
 
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
     service: "VOTE BANKER backend",
   });
+});
+
+app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
+
+app.use((_req, res) => {
+  res.status(404).json({ error: "not_found" });
+});
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, _req, res, _next) => {
+  console.error(err.message);
+  res.status(500).json({ error: "server_error" });
 });
 
 app.listen(port, () => {

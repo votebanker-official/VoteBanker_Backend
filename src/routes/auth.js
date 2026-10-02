@@ -68,6 +68,13 @@ router.post("/otp/send", otpLimiter, async (req, res, next) => {
     const requested = req.body && req.body.channel;
     const channel = requested === "whatsapp" ? "whatsapp" : "sms";
 
+    // Without a WhatsApp sender on the Twilio Verify service, Twilio silently
+    // falls back to SMS. Keep WhatsApp off until it is set up, then set
+    // WHATSAPP_OTP_ENABLED=true.
+    if (channel === "whatsapp" && process.env.WHATSAPP_OTP_ENABLED !== "true") {
+      return res.status(400).json({ error: "channel_unavailable" });
+    }
+
     await verifyService().verifications.create({ to: phone, channel });
     res.json({ status: "sent", channel });
   } catch (err) {

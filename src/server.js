@@ -36,6 +36,14 @@ app.use(
 
 app.use("/api", rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false }));
 
+app.get("/", (_req, res) => {
+  res.json({
+    service: "VOTE BANKER backend",
+    status: "running",
+    endpoints: ["GET /api/health", "POST /api/auth/otp/send", "POST /api/auth/otp/verify", "GET|PUT /api/profile"],
+  });
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
@@ -53,6 +61,9 @@ app.use((_req, res) => {
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
   console.error(err.message);
+  if (err.message === "Origin not allowed") {
+    return res.status(403).json({ error: "origin_not_allowed" });
+  }
   res.status(500).json({ error: "server_error" });
 });
 

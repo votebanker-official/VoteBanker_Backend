@@ -69,6 +69,10 @@ router.post("/otp/send", otpLimiter, async (req, res, next) => {
     res.json({ status: "sent" });
   } catch (err) {
     if (err.status === 429) return res.status(429).json({ error: "too_many_requests" });
+    // Twilio trial accounts can only text numbers verified in the Twilio console.
+    if (err.code === 21608 || /verified tester|unverified/i.test(err.message || "")) {
+      return res.status(403).json({ error: "number_not_verified" });
+    }
     if (err.status === 400) return res.status(400).json({ error: "invalid_phone" });
     next(err);
   }

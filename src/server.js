@@ -1,4 +1,12 @@
+require("dotenv").config();
+
 const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+
+const authRoutes = require("./routes/auth");
+const profileRoutes = require("./routes/profile");
 
 const { loadEnv } = require("./env");
 const { createMerchandiseRouter } = require("./merchandise");
@@ -8,27 +16,38 @@ loadEnv();
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const allowed = (process.env.CORS_ORIGINS || "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const permit = !origin || allowed.length === 0 || allowed.includes(origin);
-  if (permit) {
-    res.setHeader("Access-Control-Allow-Origin", origin || "*");
-  }
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Vary", "Origin");
-  if (req.method === "OPTIONS") {
-    res.sendStatus(204);
-    return;
-  }
-  next();
-});
+// Railway sits behind a proxy; needed for correct client IPs in rate limiting.
+app.set("trust proxy", 1);
 
-app.use(express.json({ limit: "32kb" }));
+app.use(helmet());
+app.use(express.json({ limit: "100kb" }));
+
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Allow non-browser clients (no Origin header) and listed origins.
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error("Origin not allowed"));
+    },
+  })
+);
+
+app.use("/api", rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: true, legacyHeaders: false }));
+
+app.get("/", (_req, res) => {
+  res.json({
+    service: "VOTE BANKER backend",
+    status: "running",
+    endpoints: ["GET /api/health", "POST /api/auth/otp/send", "POST /api/auth/otp/verify", "GET|PUT /api/profile"],
+  });
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({
@@ -37,7 +56,21 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-app.use("/api/merchandise", createMerchandiseRouter());
+app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
+
+app.use((_req, res) => {
+  res.status(404).json({ error: "not_found" });
+});
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, _req, res, _next) => {
+  console.error(err.message);
+  if (err.message === "Origin not allowed") {
+    return res.status(403).json({ error: "origin_not_allowed" });
+  }
+  res.status(500).json({ error: "server_error" });
+});
 
 app.listen(port, () => {
   console.log(`VOTE BANKER backend listening on port ${port}`);

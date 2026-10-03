@@ -3,3 +3,12 @@ node_modules/
 .env.*
 !.env.example
 npm-debug.log*
+
+# --- secrets safety net ---
+*cred*.txt
+*credentials*
+*.pem
+*.p12
+*.pfx
+secrets/
+

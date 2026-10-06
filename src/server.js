@@ -10,6 +10,7 @@ const profileRoutes = require("./routes/profile");
 
 const { loadEnv } = require("./env");
 const { createMerchandiseRouter } = require("./merchandise");
+const { createSpeechesRouter } = require("./speeches");
 
 loadEnv();
 
@@ -45,7 +46,15 @@ app.get("/", (_req, res) => {
   res.json({
     service: "VOTE BANKER backend",
     status: "running",
-    endpoints: ["GET /api/health", "POST /api/auth/otp/send", "POST /api/auth/otp/verify", "GET|PUT /api/profile"],
+    endpoints: [
+      "GET /api/health",
+      "POST /api/auth/otp/send",
+      "POST /api/auth/otp/verify",
+      "GET|PUT /api/profile",
+      "GET /api/merchandise/products",
+      "GET|POST /api/merchandise/orders",
+      "POST /api/speeches/generate",
+    ],
   });
 });
 
@@ -58,6 +67,8 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/merchandise", createMerchandiseRouter());
+app.use("/api/speeches", createSpeechesRouter());
 
 app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });

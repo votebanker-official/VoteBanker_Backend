@@ -43,6 +43,7 @@ You need to be invited to the Railway project first. Ask the project owner. Neve
 | POST | `/api/auth/otp/send` | `{ "phone": "+91...", "channel": "sms" }` |
 | POST | `/api/auth/otp/verify` | `{ "phone": "+91...", "code": "123456" }` returns `access_token`, `refresh_token` |
 | GET / PUT | `/api/profile` | `Authorization: Bearer <access_token>`. PUT saves onboarding answers |
+| POST | `/api/letters/generate` | Official letter from the form. Uses the speech model settings, or a formal letter composed from those details when no key is set. |
 
 How sign in works: Twilio Verify checks the code, then the backend creates or signs in a Supabase user (phone-derived email + server-computed password) and returns a normal Supabase session.
 

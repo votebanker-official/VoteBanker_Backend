@@ -11,6 +11,7 @@ const profileRoutes = require("./routes/profile");
 const { loadEnv } = require("./env");
 const { createMerchandiseRouter } = require("./merchandise");
 const { createSpeechesRouter } = require("./speeches");
+const { createLettersRouter } = require("./letters");
 
 loadEnv();
 
@@ -54,6 +55,7 @@ app.get("/", (_req, res) => {
       "GET /api/merchandise/products",
       "GET|POST /api/merchandise/orders",
       "POST /api/speeches/generate",
+      "POST /api/letters/generate",
     ],
   });
 });
@@ -69,6 +71,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/merchandise", createMerchandiseRouter());
 app.use("/api/speeches", createSpeechesRouter());
+app.use("/api/letters", createLettersRouter());
 
 app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });

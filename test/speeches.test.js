@@ -110,6 +110,57 @@ test("a configured model returns its speech and keeps the request metadata", asy
   assert.match(seen.options.body, /improving education/);
 });
 
+test("a configured model failure falls back to a development draft", async () => {
+  const originalError = console.error;
+  const logged = [];
+  console.error = (message) => logged.push(String(message));
+  try {
+    const result = await generateSpeech(base, {
+      env: { SPEECH_AI_API_KEY: "test-key", SPEECH_AI_BASE_URL: "https://example.test/v1", SPEECH_AI_MODEL: "speech-test" },
+      fetchImpl: async () => ({
+        ok: false,
+        status: 503,
+        text: async () => JSON.stringify({ error: { message: "model unavailable" } }),
+      }),
+    });
+
+    assert.equal(result.status, 200);
+    assert.equal(result.body.success, true);
+    assert.equal(result.body.warning, "speech_ai_unavailable");
+    assert.equal(result.body.speech.source, "mock");
+    assert.match(result.body.speech.fullText, /education/i);
+    assert.match(logged.join("\n"), /speech_ai_failed: openai-compatible returned 503: model unavailable/);
+  } finally {
+    console.error = originalError;
+  }
+});
+
+test("strict speech AI mode still reports provider failure", async () => {
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    const result = await generateSpeech(base, {
+      env: {
+        SPEECH_AI_API_KEY: "test-key",
+        SPEECH_AI_BASE_URL: "https://example.test/v1",
+        SPEECH_AI_MODEL: "speech-test",
+        SPEECH_AI_STRICT: "true",
+      },
+      fetchImpl: async () => ({
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({ error: { message: "bad key" } }),
+      }),
+    });
+
+    assert.equal(result.status, 502);
+    assert.equal(result.body.success, false);
+    assert.equal(result.body.error, "generation_failed");
+  } finally {
+    console.error = originalError;
+  }
+});
+
 test("a local Ollama base URL uses the native chat API", async () => {
   let seen = null;
   const fetchImpl = async (url, options) => {

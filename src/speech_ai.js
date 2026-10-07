@@ -23,7 +23,7 @@ async function generateWithAi(request, config, fetchImpl) {
     ? await postOllama(fetchImpl, config, request, messages)
     : await postOpenAI(fetchImpl, config, request, messages);
   if (!response.ok) {
-    throw new Error("speech_ai_failed");
+    throw speechAiError(response);
   }
 
   const message = response.content;
@@ -71,6 +71,8 @@ async function postOpenAI(fetchImpl, config, request, messages) {
   return {
     ok: response.ok,
     status: response.status,
+    provider: "openai-compatible",
+    detail: response.body?.error?.message || response.text,
     content: response.body?.choices?.[0]?.message?.content,
   };
 }
@@ -98,6 +100,8 @@ async function postOllama(fetchImpl, config, request, messages) {
   return {
     ok: response.ok,
     status: response.status,
+    provider: "ollama",
+    detail: response.body?.error || response.body?.message || response.text,
     content: response.body?.message?.content,
   };
 }
@@ -118,7 +122,28 @@ async function postJson(fetchImpl, url, headers, payload) {
       body = null;
     }
   }
-  return { ok: response.ok, status: response.status, body };
+  return { ok: response.ok, status: response.status, body, text: text.slice(0, 500) };
+}
+
+function speechAiError(response) {
+  const status = response.status || "unknown";
+  const provider = response.provider || "speech-ai";
+  const detail = cleanErrorDetail(response.detail);
+  const message = detail
+    ? `speech_ai_failed: ${provider} returned ${status}: ${detail}`
+    : `speech_ai_failed: ${provider} returned ${status}`;
+  const error = new Error(message);
+  error.code = "speech_ai_failed";
+  error.provider = provider;
+  error.status = status;
+  return error;
+}
+
+function cleanErrorDetail(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.replace(/\s+/g, " ").trim().slice(0, 240);
 }
 
 function systemPrompt(duration) {

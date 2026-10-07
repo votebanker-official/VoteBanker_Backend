@@ -83,7 +83,17 @@ async function generateSpeech(body, options = {}) {
     return { status: 200, body: { success: true, speech } };
   } catch (error) {
     console.error(error.message);
-    return { status: 502, body: { success: false, error: "generation_failed" } };
+    if (String((options.env || process.env).SPEECH_AI_STRICT || "").toLowerCase() === "true") {
+      return { status: 502, body: { success: false, error: "generation_failed" } };
+    }
+    return {
+      status: 200,
+      body: {
+        success: true,
+        speech: composeMockSpeech(parsed.value),
+        warning: "speech_ai_unavailable",
+      },
+    };
   }
 }
 

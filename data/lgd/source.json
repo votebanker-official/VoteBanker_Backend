@@ -1,0 +1,17 @@
+{
+  "states": {
+    "name": "Local Government Directory, All States of India",
+    "file": "All_Stateof_India_2026-10-07_16-07-17.xlsx",
+    "retrieved": "2026-10-07",
+    "url": "https://lgdirectory.gov.in/downloadDirectory.do",
+    "report": "allStateofIndia"
+  },
+  "districts": {
+    "name": "Local Government Directory, All Districts of India",
+    "file": "All_Districtof_India_2026-10-07_16-50-27.xlsx",
+    "retrieved": "2026-10-07",
+    "url": "https://lgdirectory.gov.in/downloadDirectory.do",
+    "report": "allDistrictofIndia"
+  },
+  "assembly_constituencies": null
+}

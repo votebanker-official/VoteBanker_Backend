@@ -1,0 +1,4706 @@
+[
+  {
+    "id": 1,
+    "code": "1",
+    "state_id": 1,
+    "name": "Anantnag"
+  },
+  {
+    "id": 623,
+    "code": "623",
+    "state_id": 1,
+    "name": "Bandipora"
+  },
+  {
+    "id": 3,
+    "code": "3",
+    "state_id": 1,
+    "name": "Baramulla"
+  },
+  {
+    "id": 2,
+    "code": "2",
+    "state_id": 1,
+    "name": "Budgam"
+  },
+  {
+    "id": 4,
+    "code": "4",
+    "state_id": 1,
+    "name": "Doda"
+  },
+  {
+    "id": 626,
+    "code": "626",
+    "state_id": 1,
+    "name": "Ganderbal"
+  },
+  {
+    "id": 5,
+    "code": "5",
+    "state_id": 1,
+    "name": "Jammu"
+  },
+  {
+    "id": 7,
+    "code": "7",
+    "state_id": 1,
+    "name": "Kathua"
+  },
+  {
+    "id": 620,
+    "code": "620",
+    "state_id": 1,
+    "name": "Kishtwar"
+  },
+  {
+    "id": 622,
+    "code": "622",
+    "state_id": 1,
+    "name": "Kulgam"
+  },
+  {
+    "id": 8,
+    "code": "8",
+    "state_id": 1,
+    "name": "Kupwara"
+  },
+  {
+    "id": 10,
+    "code": "10",
+    "state_id": 1,
+    "name": "Poonch"
+  },
+  {
+    "id": 11,
+    "code": "11",
+    "state_id": 1,
+    "name": "Pulwama"
+  },
+  {
+    "id": 12,
+    "code": "12",
+    "state_id": 1,
+    "name": "Rajouri"
+  },
+  {
+    "id": 621,
+    "code": "621",
+    "state_id": 1,
+    "name": "Ramban"
+  },
+  {
+    "id": 627,
+    "code": "627",
+    "state_id": 1,
+    "name": "Reasi"
+  },
+  {
+    "id": 624,
+    "code": "624",
+    "state_id": 1,
+    "name": "Samba"
+  },
+  {
+    "id": 625,
+    "code": "625",
+    "state_id": 1,
+    "name": "Shopian"
+  },
+  {
+    "id": 13,
+    "code": "13",
+    "state_id": 1,
+    "name": "Srinagar"
+  },
+  {
+    "id": 14,
+    "code": "14",
+    "state_id": 1,
+    "name": "Udhampur"
+  },
+  {
+    "id": 15,
+    "code": "15",
+    "state_id": 2,
+    "name": "Bilaspur"
+  },
+  {
+    "id": 16,
+    "code": "16",
+    "state_id": 2,
+    "name": "Chamba"
+  },
+  {
+    "id": 17,
+    "code": "17",
+    "state_id": 2,
+    "name": "Hamirpur"
+  },
+  {
+    "id": 18,
+    "code": "18",
+    "state_id": 2,
+    "name": "Kangra"
+  },
+  {
+    "id": 19,
+    "code": "19",
+    "state_id": 2,
+    "name": "Kinnaur"
+  },
+  {
+    "id": 20,
+    "code": "20",
+    "state_id": 2,
+    "name": "Kullu"
+  },
+  {
+    "id": 21,
+    "code": "21",
+    "state_id": 2,
+    "name": "Lahaul And Spiti"
+  },
+  {
+    "id": 22,
+    "code": "22",
+    "state_id": 2,
+    "name": "Mandi"
+  },
+  {
+    "id": 23,
+    "code": "23",
+    "state_id": 2,
+    "name": "Shimla"
+  },
+  {
+    "id": 24,
+    "code": "24",
+    "state_id": 2,
+    "name": "Sirmaur"
+  },
+  {
+    "id": 25,
+    "code": "25",
+    "state_id": 2,
+    "name": "Solan"
+  },
+  {
+    "id": 26,
+    "code": "26",
+    "state_id": 2,
+    "name": "Una"
+  },
+  {
+    "id": 27,
+    "code": "27",
+    "state_id": 3,
+    "name": "Amritsar"
+  },
+  {
+    "id": 605,
+    "code": "605",
+    "state_id": 3,
+    "name": "Barnala"
+  },
+  {
+    "id": 28,
+    "code": "28",
+    "state_id": 3,
+    "name": "Bathinda"
+  },
+  {
+    "id": 29,
+    "code": "29",
+    "state_id": 3,
+    "name": "Faridkot"
+  },
+  {
+    "id": 30,
+    "code": "30",
+    "state_id": 3,
+    "name": "Fatehgarh Sahib"
+  },
+  {
+    "id": 651,
+    "code": "651",
+    "state_id": 3,
+    "name": "Fazilka"
+  },
+  {
+    "id": 31,
+    "code": "31",
+    "state_id": 3,
+    "name": "Ferozepur"
+  },
+  {
+    "id": 32,
+    "code": "32",
+    "state_id": 3,
+    "name": "Gurdaspur"
+  },
+  {
+    "id": 33,
+    "code": "33",
+    "state_id": 3,
+    "name": "Hoshiarpur"
+  },
+  {
+    "id": 34,
+    "code": "34",
+    "state_id": 3,
+    "name": "Jalandhar"
+  },
+  {
+    "id": 35,
+    "code": "35",
+    "state_id": 3,
+    "name": "Kapurthala"
+  },
+  {
+    "id": 36,
+    "code": "36",
+    "state_id": 3,
+    "name": "Ludhiana"
+  },
+  {
+    "id": 737,
+    "code": "737",
+    "state_id": 3,
+    "name": "Malerkotla"
+  },
+  {
+    "id": 37,
+    "code": "37",
+    "state_id": 3,
+    "name": "Mansa"
+  },
+  {
+    "id": 38,
+    "code": "38",
+    "state_id": 3,
+    "name": "Moga"
+  },
+  {
+    "id": 662,
+    "code": "662",
+    "state_id": 3,
+    "name": "Pathankot"
+  },
+  {
+    "id": 41,
+    "code": "41",
+    "state_id": 3,
+    "name": "Patiala"
+  },
+  {
+    "id": 42,
+    "code": "42",
+    "state_id": 3,
+    "name": "Rupnagar"
+  },
+  {
+    "id": 608,
+    "code": "608",
+    "state_id": 3,
+    "name": "S.A.S Nagar"
+  },
+  {
+    "id": 43,
+    "code": "43",
+    "state_id": 3,
+    "name": "Sangrur"
+  },
+  {
+    "id": 40,
+    "code": "40",
+    "state_id": 3,
+    "name": "Shahid Bhagat Singh Nagar"
+  },
+  {
+    "id": 39,
+    "code": "39",
+    "state_id": 3,
+    "name": "Sri Muktsar Sahib"
+  },
+  {
+    "id": 609,
+    "code": "609",
+    "state_id": 3,
+    "name": "Tarn Taran"
+  },
+  {
+    "id": 44,
+    "code": "44",
+    "state_id": 4,
+    "name": "Chandigarh"
+  },
+  {
+    "id": 45,
+    "code": "45",
+    "state_id": 5,
+    "name": "Almora"
+  },
+  {
+    "id": 46,
+    "code": "46",
+    "state_id": 5,
+    "name": "Bageshwar"
+  },
+  {
+    "id": 47,
+    "code": "47",
+    "state_id": 5,
+    "name": "Chamoli"
+  },
+  {
+    "id": 48,
+    "code": "48",
+    "state_id": 5,
+    "name": "Champawat"
+  },
+  {
+    "id": 49,
+    "code": "49",
+    "state_id": 5,
+    "name": "Dehradun"
+  },
+  {
+    "id": 50,
+    "code": "50",
+    "state_id": 5,
+    "name": "Haridwar"
+  },
+  {
+    "id": 51,
+    "code": "51",
+    "state_id": 5,
+    "name": "Nainital"
+  },
+  {
+    "id": 52,
+    "code": "52",
+    "state_id": 5,
+    "name": "Pauri Garhwal"
+  },
+  {
+    "id": 53,
+    "code": "53",
+    "state_id": 5,
+    "name": "Pithoragarh"
+  },
+  {
+    "id": 54,
+    "code": "54",
+    "state_id": 5,
+    "name": "Rudraprayag"
+  },
+  {
+    "id": 55,
+    "code": "55",
+    "state_id": 5,
+    "name": "Tehri Garhwal"
+  },
+  {
+    "id": 56,
+    "code": "56",
+    "state_id": 5,
+    "name": "Udham Singh Nagar"
+  },
+  {
+    "id": 57,
+    "code": "57",
+    "state_id": 5,
+    "name": "Uttarkashi"
+  },
+  {
+    "id": 58,
+    "code": "58",
+    "state_id": 6,
+    "name": "Ambala"
+  },
+  {
+    "id": 59,
+    "code": "59",
+    "state_id": 6,
+    "name": "Bhiwani"
+  },
+  {
+    "id": 701,
+    "code": "701",
+    "state_id": 6,
+    "name": "Charkhi Dadri"
+  },
+  {
+    "id": 60,
+    "code": "60",
+    "state_id": 6,
+    "name": "Faridabad"
+  },
+  {
+    "id": 61,
+    "code": "61",
+    "state_id": 6,
+    "name": "Fatehabad"
+  },
+  {
+    "id": 62,
+    "code": "62",
+    "state_id": 6,
+    "name": "Gurugram"
+  },
+  {
+    "id": 792,
+    "code": "792",
+    "state_id": 6,
+    "name": "Hansi"
+  },
+  {
+    "id": 63,
+    "code": "63",
+    "state_id": 6,
+    "name": "Hisar"
+  },
+  {
+    "id": 64,
+    "code": "64",
+    "state_id": 6,
+    "name": "Jhajjar"
+  },
+  {
+    "id": 65,
+    "code": "65",
+    "state_id": 6,
+    "name": "Jind"
+  },
+  {
+    "id": 66,
+    "code": "66",
+    "state_id": 6,
+    "name": "Kaithal"
+  },
+  {
+    "id": 67,
+    "code": "67",
+    "state_id": 6,
+    "name": "Karnal"
+  },
+  {
+    "id": 68,
+    "code": "68",
+    "state_id": 6,
+    "name": "Kurukshetra"
+  },
+  {
+    "id": 69,
+    "code": "69",
+    "state_id": 6,
+    "name": "Mahendragarh"
+  },
+  {
+    "id": 604,
+    "code": "604",
+    "state_id": 6,
+    "name": "Nuh"
+  },
+  {
+    "id": 619,
+    "code": "619",
+    "state_id": 6,
+    "name": "Palwal"
+  },
+  {
+    "id": 70,
+    "code": "70",
+    "state_id": 6,
+    "name": "Panchkula"
+  },
+  {
+    "id": 71,
+    "code": "71",
+    "state_id": 6,
+    "name": "Panipat"
+  },
+  {
+    "id": 72,
+    "code": "72",
+    "state_id": 6,
+    "name": "Rewari"
+  },
+  {
+    "id": 73,
+    "code": "73",
+    "state_id": 6,
+    "name": "Rohtak"
+  },
+  {
+    "id": 74,
+    "code": "74",
+    "state_id": 6,
+    "name": "Sirsa"
+  },
+  {
+    "id": 75,
+    "code": "75",
+    "state_id": 6,
+    "name": "Sonipat"
+  },
+  {
+    "id": 76,
+    "code": "76",
+    "state_id": 6,
+    "name": "Yamunanagar"
+  },
+  {
+    "id": 77,
+    "code": "77",
+    "state_id": 7,
+    "name": "Central"
+  },
+  {
+    "id": 796,
+    "code": "796",
+    "state_id": 7,
+    "name": "Central North"
+  },
+  {
+    "id": 78,
+    "code": "78",
+    "state_id": 7,
+    "name": "East"
+  },
+  {
+    "id": 79,
+    "code": "79",
+    "state_id": 7,
+    "name": "New Delhi"
+  },
+  {
+    "id": 80,
+    "code": "80",
+    "state_id": 7,
+    "name": "North"
+  },
+  {
+    "id": 81,
+    "code": "81",
+    "state_id": 7,
+    "name": "North East"
+  },
+  {
+    "id": 82,
+    "code": "82",
+    "state_id": 7,
+    "name": "North West"
+  },
+  {
+    "id": 795,
+    "code": "795",
+    "state_id": 7,
+    "name": "Old Delhi"
+  },
+  {
+    "id": 794,
+    "code": "794",
+    "state_id": 7,
+    "name": "Outer North"
+  },
+  {
+    "id": 83,
+    "code": "83",
+    "state_id": 7,
+    "name": "South"
+  },
+  {
+    "id": 670,
+    "code": "670",
+    "state_id": 7,
+    "name": "South East"
+  },
+  {
+    "id": 84,
+    "code": "84",
+    "state_id": 7,
+    "name": "South West"
+  },
+  {
+    "id": 85,
+    "code": "85",
+    "state_id": 7,
+    "name": "West"
+  },
+  {
+    "id": 86,
+    "code": "86",
+    "state_id": 8,
+    "name": "Ajmer"
+  },
+  {
+    "id": 87,
+    "code": "87",
+    "state_id": 8,
+    "name": "Alwar"
+  },
+  {
+    "id": 775,
+    "code": "775",
+    "state_id": 8,
+    "name": "Balotra"
+  },
+  {
+    "id": 88,
+    "code": "88",
+    "state_id": 8,
+    "name": "Banswara"
+  },
+  {
+    "id": 89,
+    "code": "89",
+    "state_id": 8,
+    "name": "Baran"
+  },
+  {
+    "id": 90,
+    "code": "90",
+    "state_id": 8,
+    "name": "Barmer"
+  },
+  {
+    "id": 774,
+    "code": "774",
+    "state_id": 8,
+    "name": "Beawar"
+  },
+  {
+    "id": 91,
+    "code": "91",
+    "state_id": 8,
+    "name": "Bharatpur"
+  },
+  {
+    "id": 92,
+    "code": "92",
+    "state_id": 8,
+    "name": "Bhilwara"
+  },
+  {
+    "id": 93,
+    "code": "93",
+    "state_id": 8,
+    "name": "Bikaner"
+  },
+  {
+    "id": 94,
+    "code": "94",
+    "state_id": 8,
+    "name": "Bundi"
+  },
+  {
+    "id": 95,
+    "code": "95",
+    "state_id": 8,
+    "name": "Chittorgarh"
+  },
+  {
+    "id": 96,
+    "code": "96",
+    "state_id": 8,
+    "name": "Churu"
+  },
+  {
+    "id": 97,
+    "code": "97",
+    "state_id": 8,
+    "name": "Dausa"
+  },
+  {
+    "id": 767,
+    "code": "767",
+    "state_id": 8,
+    "name": "Deeg"
+  },
+  {
+    "id": 98,
+    "code": "98",
+    "state_id": 8,
+    "name": "Dholpur"
+  },
+  {
+    "id": 768,
+    "code": "768",
+    "state_id": 8,
+    "name": "Didwana-Kuchaman"
+  },
+  {
+    "id": 99,
+    "code": "99",
+    "state_id": 8,
+    "name": "Dungarpur"
+  },
+  {
+    "id": 100,
+    "code": "100",
+    "state_id": 8,
+    "name": "Ganganagar"
+  },
+  {
+    "id": 101,
+    "code": "101",
+    "state_id": 8,
+    "name": "Hanumangarh"
+  },
+  {
+    "id": 102,
+    "code": "102",
+    "state_id": 8,
+    "name": "Jaipur"
+  },
+  {
+    "id": 103,
+    "code": "103",
+    "state_id": 8,
+    "name": "Jaisalmer"
+  },
+  {
+    "id": 104,
+    "code": "104",
+    "state_id": 8,
+    "name": "Jalore"
+  },
+  {
+    "id": 105,
+    "code": "105",
+    "state_id": 8,
+    "name": "Jhalawar"
+  },
+  {
+    "id": 106,
+    "code": "106",
+    "state_id": 8,
+    "name": "Jhunjhunu"
+  },
+  {
+    "id": 107,
+    "code": "107",
+    "state_id": 8,
+    "name": "Jodhpur"
+  },
+  {
+    "id": 108,
+    "code": "108",
+    "state_id": 8,
+    "name": "Karauli"
+  },
+  {
+    "id": 770,
+    "code": "770",
+    "state_id": 8,
+    "name": "Khairthal-Tijara"
+  },
+  {
+    "id": 109,
+    "code": "109",
+    "state_id": 8,
+    "name": "Kota"
+  },
+  {
+    "id": 782,
+    "code": "782",
+    "state_id": 8,
+    "name": "Kotputli-Behror"
+  },
+  {
+    "id": 110,
+    "code": "110",
+    "state_id": 8,
+    "name": "Nagaur"
+  },
+  {
+    "id": 111,
+    "code": "111",
+    "state_id": 8,
+    "name": "Pali"
+  },
+  {
+    "id": 772,
+    "code": "772",
+    "state_id": 8,
+    "name": "Phalodi"
+  },
+  {
+    "id": 629,
+    "code": "629",
+    "state_id": 8,
+    "name": "Pratapgarh"
+  },
+  {
+    "id": 112,
+    "code": "112",
+    "state_id": 8,
+    "name": "Rajsamand"
+  },
+  {
+    "id": 777,
+    "code": "777",
+    "state_id": 8,
+    "name": "Salumbar"
+  },
+  {
+    "id": 113,
+    "code": "113",
+    "state_id": 8,
+    "name": "Sawai Madhopur"
+  },
+  {
+    "id": 114,
+    "code": "114",
+    "state_id": 8,
+    "name": "Sikar"
+  },
+  {
+    "id": 115,
+    "code": "115",
+    "state_id": 8,
+    "name": "Sirohi"
+  },
+  {
+    "id": 116,
+    "code": "116",
+    "state_id": 8,
+    "name": "Tonk"
+  },
+  {
+    "id": 117,
+    "code": "117",
+    "state_id": 8,
+    "name": "Udaipur"
+  },
+  {
+    "id": 118,
+    "code": "118",
+    "state_id": 9,
+    "name": "Agra"
+  },
+  {
+    "id": 119,
+    "code": "119",
+    "state_id": 9,
+    "name": "Aligarh"
+  },
+  {
+    "id": 121,
+    "code": "121",
+    "state_id": 9,
+    "name": "Ambedkar Nagar"
+  },
+  {
+    "id": 640,
+    "code": "640",
+    "state_id": 9,
+    "name": "Amethi"
+  },
+  {
+    "id": 154,
+    "code": "154",
+    "state_id": 9,
+    "name": "Amroha"
+  },
+  {
+    "id": 122,
+    "code": "122",
+    "state_id": 9,
+    "name": "Auraiya"
+  },
+  {
+    "id": 140,
+    "code": "140",
+    "state_id": 9,
+    "name": "Ayodhya"
+  },
+  {
+    "id": 123,
+    "code": "123",
+    "state_id": 9,
+    "name": "Azamgarh"
+  },
+  {
+    "id": 124,
+    "code": "124",
+    "state_id": 9,
+    "name": "Baghpat"
+  },
+  {
+    "id": 125,
+    "code": "125",
+    "state_id": 9,
+    "name": "Bahraich"
+  },
+  {
+    "id": 126,
+    "code": "126",
+    "state_id": 9,
+    "name": "Ballia"
+  },
+  {
+    "id": 127,
+    "code": "127",
+    "state_id": 9,
+    "name": "Balrampur"
+  },
+  {
+    "id": 128,
+    "code": "128",
+    "state_id": 9,
+    "name": "Banda"
+  },
+  {
+    "id": 129,
+    "code": "129",
+    "state_id": 9,
+    "name": "Bara Banki"
+  },
+  {
+    "id": 130,
+    "code": "130",
+    "state_id": 9,
+    "name": "Bareilly"
+  },
+  {
+    "id": 131,
+    "code": "131",
+    "state_id": 9,
+    "name": "Basti"
+  },
+  {
+    "id": 179,
+    "code": "179",
+    "state_id": 9,
+    "name": "Bhadohi"
+  },
+  {
+    "id": 132,
+    "code": "132",
+    "state_id": 9,
+    "name": "Bijnor"
+  },
+  {
+    "id": 133,
+    "code": "133",
+    "state_id": 9,
+    "name": "Budaun"
+  },
+  {
+    "id": 134,
+    "code": "134",
+    "state_id": 9,
+    "name": "Bulandshahr"
+  },
+  {
+    "id": 135,
+    "code": "135",
+    "state_id": 9,
+    "name": "Chandauli"
+  },
+  {
+    "id": 136,
+    "code": "136",
+    "state_id": 9,
+    "name": "Chitrakoot"
+  },
+  {
+    "id": 137,
+    "code": "137",
+    "state_id": 9,
+    "name": "Deoria"
+  },
+  {
+    "id": 138,
+    "code": "138",
+    "state_id": 9,
+    "name": "Etah"
+  },
+  {
+    "id": 139,
+    "code": "139",
+    "state_id": 9,
+    "name": "Etawah"
+  },
+  {
+    "id": 141,
+    "code": "141",
+    "state_id": 9,
+    "name": "Farrukhabad"
+  },
+  {
+    "id": 142,
+    "code": "142",
+    "state_id": 9,
+    "name": "Fatehpur"
+  },
+  {
+    "id": 143,
+    "code": "143",
+    "state_id": 9,
+    "name": "Firozabad"
+  },
+  {
+    "id": 144,
+    "code": "144",
+    "state_id": 9,
+    "name": "Gautam Buddha Nagar"
+  },
+  {
+    "id": 145,
+    "code": "145",
+    "state_id": 9,
+    "name": "Ghaziabad"
+  },
+  {
+    "id": 146,
+    "code": "146",
+    "state_id": 9,
+    "name": "Ghazipur"
+  },
+  {
+    "id": 147,
+    "code": "147",
+    "state_id": 9,
+    "name": "Gonda"
+  },
+  {
+    "id": 148,
+    "code": "148",
+    "state_id": 9,
+    "name": "Gorakhpur"
+  },
+  {
+    "id": 149,
+    "code": "149",
+    "state_id": 9,
+    "name": "Hamirpur"
+  },
+  {
+    "id": 661,
+    "code": "661",
+    "state_id": 9,
+    "name": "Hapur"
+  },
+  {
+    "id": 150,
+    "code": "150",
+    "state_id": 9,
+    "name": "Hardoi"
+  },
+  {
+    "id": 163,
+    "code": "163",
+    "state_id": 9,
+    "name": "Hathras"
+  },
+  {
+    "id": 151,
+    "code": "151",
+    "state_id": 9,
+    "name": "Jalaun"
+  },
+  {
+    "id": 152,
+    "code": "152",
+    "state_id": 9,
+    "name": "Jaunpur"
+  },
+  {
+    "id": 153,
+    "code": "153",
+    "state_id": 9,
+    "name": "Jhansi"
+  },
+  {
+    "id": 155,
+    "code": "155",
+    "state_id": 9,
+    "name": "Kannauj"
+  },
+  {
+    "id": 156,
+    "code": "156",
+    "state_id": 9,
+    "name": "Kanpur Dehat"
+  },
+  {
+    "id": 157,
+    "code": "157",
+    "state_id": 9,
+    "name": "Kanpur Nagar"
+  },
+  {
+    "id": 633,
+    "code": "633",
+    "state_id": 9,
+    "name": "Kasganj"
+  },
+  {
+    "id": 158,
+    "code": "158",
+    "state_id": 9,
+    "name": "Kaushambi"
+  },
+  {
+    "id": 159,
+    "code": "159",
+    "state_id": 9,
+    "name": "Kheri"
+  },
+  {
+    "id": 160,
+    "code": "160",
+    "state_id": 9,
+    "name": "Kushinagar"
+  },
+  {
+    "id": 161,
+    "code": "161",
+    "state_id": 9,
+    "name": "Lalitpur"
+  },
+  {
+    "id": 162,
+    "code": "162",
+    "state_id": 9,
+    "name": "Lucknow"
+  },
+  {
+    "id": 165,
+    "code": "165",
+    "state_id": 9,
+    "name": "Mahoba"
+  },
+  {
+    "id": 164,
+    "code": "164",
+    "state_id": 9,
+    "name": "Mahrajganj"
+  },
+  {
+    "id": 166,
+    "code": "166",
+    "state_id": 9,
+    "name": "Mainpuri"
+  },
+  {
+    "id": 167,
+    "code": "167",
+    "state_id": 9,
+    "name": "Mathura"
+  },
+  {
+    "id": 168,
+    "code": "168",
+    "state_id": 9,
+    "name": "Mau"
+  },
+  {
+    "id": 169,
+    "code": "169",
+    "state_id": 9,
+    "name": "Meerut"
+  },
+  {
+    "id": 170,
+    "code": "170",
+    "state_id": 9,
+    "name": "Mirzapur"
+  },
+  {
+    "id": 171,
+    "code": "171",
+    "state_id": 9,
+    "name": "Moradabad"
+  },
+  {
+    "id": 172,
+    "code": "172",
+    "state_id": 9,
+    "name": "Muzaffarnagar"
+  },
+  {
+    "id": 173,
+    "code": "173",
+    "state_id": 9,
+    "name": "Pilibhit"
+  },
+  {
+    "id": 174,
+    "code": "174",
+    "state_id": 9,
+    "name": "Pratapgarh"
+  },
+  {
+    "id": 120,
+    "code": "120",
+    "state_id": 9,
+    "name": "Prayagraj"
+  },
+  {
+    "id": 175,
+    "code": "175",
+    "state_id": 9,
+    "name": "Rae Bareli"
+  },
+  {
+    "id": 176,
+    "code": "176",
+    "state_id": 9,
+    "name": "Rampur"
+  },
+  {
+    "id": 177,
+    "code": "177",
+    "state_id": 9,
+    "name": "Saharanpur"
+  },
+  {
+    "id": 659,
+    "code": "659",
+    "state_id": 9,
+    "name": "Sambhal"
+  },
+  {
+    "id": 178,
+    "code": "178",
+    "state_id": 9,
+    "name": "Sant Kabir Nagar"
+  },
+  {
+    "id": 180,
+    "code": "180",
+    "state_id": 9,
+    "name": "Shahjahanpur"
+  },
+  {
+    "id": 660,
+    "code": "660",
+    "state_id": 9,
+    "name": "Shamli"
+  },
+  {
+    "id": 181,
+    "code": "181",
+    "state_id": 9,
+    "name": "Shrawasti"
+  },
+  {
+    "id": 182,
+    "code": "182",
+    "state_id": 9,
+    "name": "Siddharthnagar"
+  },
+  {
+    "id": 183,
+    "code": "183",
+    "state_id": 9,
+    "name": "Sitapur"
+  },
+  {
+    "id": 184,
+    "code": "184",
+    "state_id": 9,
+    "name": "Sonbhadra"
+  },
+  {
+    "id": 185,
+    "code": "185",
+    "state_id": 9,
+    "name": "Sultanpur"
+  },
+  {
+    "id": 186,
+    "code": "186",
+    "state_id": 9,
+    "name": "Unnao"
+  },
+  {
+    "id": 187,
+    "code": "187",
+    "state_id": 9,
+    "name": "Varanasi"
+  },
+  {
+    "id": 188,
+    "code": "188",
+    "state_id": 10,
+    "name": "Araria"
+  },
+  {
+    "id": 611,
+    "code": "611",
+    "state_id": 10,
+    "name": "Arwal"
+  },
+  {
+    "id": 189,
+    "code": "189",
+    "state_id": 10,
+    "name": "Aurangabad"
+  },
+  {
+    "id": 190,
+    "code": "190",
+    "state_id": 10,
+    "name": "Banka"
+  },
+  {
+    "id": 191,
+    "code": "191",
+    "state_id": 10,
+    "name": "Begusarai"
+  },
+  {
+    "id": 192,
+    "code": "192",
+    "state_id": 10,
+    "name": "Bhagalpur"
+  },
+  {
+    "id": 193,
+    "code": "193",
+    "state_id": 10,
+    "name": "Bhojpur"
+  },
+  {
+    "id": 194,
+    "code": "194",
+    "state_id": 10,
+    "name": "Buxar"
+  },
+  {
+    "id": 195,
+    "code": "195",
+    "state_id": 10,
+    "name": "Darbhanga"
+  },
+  {
+    "id": 196,
+    "code": "196",
+    "state_id": 10,
+    "name": "Gaya"
+  },
+  {
+    "id": 197,
+    "code": "197",
+    "state_id": 10,
+    "name": "Gopalganj"
+  },
+  {
+    "id": 198,
+    "code": "198",
+    "state_id": 10,
+    "name": "Jamui"
+  },
+  {
+    "id": 199,
+    "code": "199",
+    "state_id": 10,
+    "name": "Jehanabad"
+  },
+  {
+    "id": 200,
+    "code": "200",
+    "state_id": 10,
+    "name": "Kaimur (Bhabua)"
+  },
+  {
+    "id": 201,
+    "code": "201",
+    "state_id": 10,
+    "name": "Katihar"
+  },
+  {
+    "id": 202,
+    "code": "202",
+    "state_id": 10,
+    "name": "Khagaria"
+  },
+  {
+    "id": 203,
+    "code": "203",
+    "state_id": 10,
+    "name": "Kishanganj"
+  },
+  {
+    "id": 204,
+    "code": "204",
+    "state_id": 10,
+    "name": "Lakhisarai"
+  },
+  {
+    "id": 205,
+    "code": "205",
+    "state_id": 10,
+    "name": "Madhepura"
+  },
+  {
+    "id": 206,
+    "code": "206",
+    "state_id": 10,
+    "name": "Madhubani"
+  },
+  {
+    "id": 207,
+    "code": "207",
+    "state_id": 10,
+    "name": "Munger"
+  },
+  {
+    "id": 208,
+    "code": "208",
+    "state_id": 10,
+    "name": "Muzaffarpur"
+  },
+  {
+    "id": 209,
+    "code": "209",
+    "state_id": 10,
+    "name": "Nalanda"
+  },
+  {
+    "id": 210,
+    "code": "210",
+    "state_id": 10,
+    "name": "Nawada"
+  },
+  {
+    "id": 211,
+    "code": "211",
+    "state_id": 10,
+    "name": "Pashchim Champaran"
+  },
+  {
+    "id": 212,
+    "code": "212",
+    "state_id": 10,
+    "name": "Patna"
+  },
+  {
+    "id": 213,
+    "code": "213",
+    "state_id": 10,
+    "name": "Purbi Champaran"
+  },
+  {
+    "id": 214,
+    "code": "214",
+    "state_id": 10,
+    "name": "Purnia"
+  },
+  {
+    "id": 215,
+    "code": "215",
+    "state_id": 10,
+    "name": "Rohtas"
+  },
+  {
+    "id": 216,
+    "code": "216",
+    "state_id": 10,
+    "name": "Saharsa"
+  },
+  {
+    "id": 217,
+    "code": "217",
+    "state_id": 10,
+    "name": "Samastipur"
+  },
+  {
+    "id": 218,
+    "code": "218",
+    "state_id": 10,
+    "name": "Saran"
+  },
+  {
+    "id": 219,
+    "code": "219",
+    "state_id": 10,
+    "name": "Sheikhpura"
+  },
+  {
+    "id": 220,
+    "code": "220",
+    "state_id": 10,
+    "name": "Sheohar"
+  },
+  {
+    "id": 221,
+    "code": "221",
+    "state_id": 10,
+    "name": "Sitamarhi"
+  },
+  {
+    "id": 222,
+    "code": "222",
+    "state_id": 10,
+    "name": "Siwan"
+  },
+  {
+    "id": 223,
+    "code": "223",
+    "state_id": 10,
+    "name": "Supaul"
+  },
+  {
+    "id": 224,
+    "code": "224",
+    "state_id": 10,
+    "name": "Vaishali"
+  },
+  {
+    "id": 225,
+    "code": "225",
+    "state_id": 11,
+    "name": "Gangtok"
+  },
+  {
+    "id": 228,
+    "code": "228",
+    "state_id": 11,
+    "name": "Gyalshing"
+  },
+  {
+    "id": 226,
+    "code": "226",
+    "state_id": 11,
+    "name": "Mangan"
+  },
+  {
+    "id": 227,
+    "code": "227",
+    "state_id": 11,
+    "name": "Namchi"
+  },
+  {
+    "id": 741,
+    "code": "741",
+    "state_id": 11,
+    "name": "Pakyong"
+  },
+  {
+    "id": 742,
+    "code": "742",
+    "state_id": 11,
+    "name": "Soreng"
+  },
+  {
+    "id": 628,
+    "code": "628",
+    "state_id": 12,
+    "name": "Anjaw"
+  },
+  {
+    "id": 787,
+    "code": "787",
+    "state_id": 12,
+    "name": "Bichom"
+  },
+  {
+    "id": 229,
+    "code": "229",
+    "state_id": 12,
+    "name": "Changlang"
+  },
+  {
+    "id": 230,
+    "code": "230",
+    "state_id": 12,
+    "name": "Dibang Valley"
+  },
+  {
+    "id": 231,
+    "code": "231",
+    "state_id": 12,
+    "name": "East Kameng"
+  },
+  {
+    "id": 232,
+    "code": "232",
+    "state_id": 12,
+    "name": "East Siang"
+  },
+  {
+    "id": 718,
+    "code": "718",
+    "state_id": 12,
+    "name": "Kamle"
+  },
+  {
+    "id": 786,
+    "code": "786",
+    "state_id": 12,
+    "name": "Keyi Panyor"
+  },
+  {
+    "id": 677,
+    "code": "677",
+    "state_id": 12,
+    "name": "Kra Daadi"
+  },
+  {
+    "id": 233,
+    "code": "233",
+    "state_id": 12,
+    "name": "Kurung Kumey"
+  },
+  {
+    "id": 724,
+    "code": "724",
+    "state_id": 12,
+    "name": "Leparada"
+  },
+  {
+    "id": 234,
+    "code": "234",
+    "state_id": 12,
+    "name": "Lohit"
+  },
+  {
+    "id": 666,
+    "code": "666",
+    "state_id": 12,
+    "name": "Longding"
+  },
+  {
+    "id": 235,
+    "code": "235",
+    "state_id": 12,
+    "name": "Lower Dibang Valley"
+  },
+  {
+    "id": 719,
+    "code": "719",
+    "state_id": 12,
+    "name": "Lower Siang"
+  },
+  {
+    "id": 236,
+    "code": "236",
+    "state_id": 12,
+    "name": "Lower Subansiri"
+  },
+  {
+    "id": 678,
+    "code": "678",
+    "state_id": 12,
+    "name": "Namsai"
+  },
+  {
+    "id": 723,
+    "code": "723",
+    "state_id": 12,
+    "name": "Pakke Kessang"
+  },
+  {
+    "id": 237,
+    "code": "237",
+    "state_id": 12,
+    "name": "Papum Pare"
+  },
+  {
+    "id": 725,
+    "code": "725",
+    "state_id": 12,
+    "name": "Shi Yomi"
+  },
+  {
+    "id": 679,
+    "code": "679",
+    "state_id": 12,
+    "name": "Siang"
+  },
+  {
+    "id": 238,
+    "code": "238",
+    "state_id": 12,
+    "name": "Tawang"
+  },
+  {
+    "id": 239,
+    "code": "239",
+    "state_id": 12,
+    "name": "Tirap"
+  },
+  {
+    "id": 240,
+    "code": "240",
+    "state_id": 12,
+    "name": "Upper Siang"
+  },
+  {
+    "id": 241,
+    "code": "241",
+    "state_id": 12,
+    "name": "Upper Subansiri"
+  },
+  {
+    "id": 242,
+    "code": "242",
+    "state_id": 12,
+    "name": "West Kameng"
+  },
+  {
+    "id": 243,
+    "code": "243",
+    "state_id": 12,
+    "name": "West Siang"
+  },
+  {
+    "id": 758,
+    "code": "758",
+    "state_id": 13,
+    "name": "Chumoukedima"
+  },
+  {
+    "id": 244,
+    "code": "244",
+    "state_id": 13,
+    "name": "Dimapur"
+  },
+  {
+    "id": 614,
+    "code": "614",
+    "state_id": 13,
+    "name": "Kiphire"
+  },
+  {
+    "id": 245,
+    "code": "245",
+    "state_id": 13,
+    "name": "Kohima"
+  },
+  {
+    "id": 615,
+    "code": "615",
+    "state_id": 13,
+    "name": "Longleng"
+  },
+  {
+    "id": 788,
+    "code": "788",
+    "state_id": 13,
+    "name": "Meluri"
+  },
+  {
+    "id": 246,
+    "code": "246",
+    "state_id": 13,
+    "name": "Mokokchung"
+  },
+  {
+    "id": 247,
+    "code": "247",
+    "state_id": 13,
+    "name": "Mon"
+  },
+  {
+    "id": 764,
+    "code": "764",
+    "state_id": 13,
+    "name": "Niuland"
+  },
+  {
+    "id": 736,
+    "code": "736",
+    "state_id": 13,
+    "name": "Noklak"
+  },
+  {
+    "id": 613,
+    "code": "613",
+    "state_id": 13,
+    "name": "Peren"
+  },
+  {
+    "id": 248,
+    "code": "248",
+    "state_id": 13,
+    "name": "Phek"
+  },
+  {
+    "id": 765,
+    "code": "765",
+    "state_id": 13,
+    "name": "Shamator"
+  },
+  {
+    "id": 757,
+    "code": "757",
+    "state_id": 13,
+    "name": "Tseminyu"
+  },
+  {
+    "id": 249,
+    "code": "249",
+    "state_id": 13,
+    "name": "Tuensang"
+  },
+  {
+    "id": 250,
+    "code": "250",
+    "state_id": 13,
+    "name": "Wokha"
+  },
+  {
+    "id": 251,
+    "code": "251",
+    "state_id": 13,
+    "name": "Zunheboto"
+  },
+  {
+    "id": 252,
+    "code": "252",
+    "state_id": 14,
+    "name": "Bishnupur"
+  },
+  {
+    "id": 253,
+    "code": "253",
+    "state_id": 14,
+    "name": "Chandel"
+  },
+  {
+    "id": 254,
+    "code": "254",
+    "state_id": 14,
+    "name": "Churachandpur"
+  },
+  {
+    "id": 255,
+    "code": "255",
+    "state_id": 14,
+    "name": "Imphal East"
+  },
+  {
+    "id": 256,
+    "code": "256",
+    "state_id": 14,
+    "name": "Imphal West"
+  },
+  {
+    "id": 713,
+    "code": "713",
+    "state_id": 14,
+    "name": "Jiribam"
+  },
+  {
+    "id": 711,
+    "code": "711",
+    "state_id": 14,
+    "name": "Kakching"
+  },
+  {
+    "id": 717,
+    "code": "717",
+    "state_id": 14,
+    "name": "Kamjong"
+  },
+  {
+    "id": 712,
+    "code": "712",
+    "state_id": 14,
+    "name": "Kangpokpi"
+  },
+  {
+    "id": 714,
+    "code": "714",
+    "state_id": 14,
+    "name": "Noney"
+  },
+  {
+    "id": 715,
+    "code": "715",
+    "state_id": 14,
+    "name": "Pherzawl"
+  },
+  {
+    "id": 257,
+    "code": "257",
+    "state_id": 14,
+    "name": "Senapati"
+  },
+  {
+    "id": 258,
+    "code": "258",
+    "state_id": 14,
+    "name": "Tamenglong"
+  },
+  {
+    "id": 716,
+    "code": "716",
+    "state_id": 14,
+    "name": "Tengnoupal"
+  },
+  {
+    "id": 259,
+    "code": "259",
+    "state_id": 14,
+    "name": "Thoubal"
+  },
+  {
+    "id": 260,
+    "code": "260",
+    "state_id": 14,
+    "name": "Ukhrul"
+  },
+  {
+    "id": 261,
+    "code": "261",
+    "state_id": 15,
+    "name": "Aizawl"
+  },
+  {
+    "id": 262,
+    "code": "262",
+    "state_id": 15,
+    "name": "Champhai"
+  },
+  {
+    "id": 726,
+    "code": "726",
+    "state_id": 15,
+    "name": "Hnahthial"
+  },
+  {
+    "id": 728,
+    "code": "728",
+    "state_id": 15,
+    "name": "Khawzawl"
+  },
+  {
+    "id": 263,
+    "code": "263",
+    "state_id": 15,
+    "name": "Kolasib"
+  },
+  {
+    "id": 264,
+    "code": "264",
+    "state_id": 15,
+    "name": "Lawngtlai"
+  },
+  {
+    "id": 265,
+    "code": "265",
+    "state_id": 15,
+    "name": "Lunglei"
+  },
+  {
+    "id": 266,
+    "code": "266",
+    "state_id": 15,
+    "name": "Mamit"
+  },
+  {
+    "id": 727,
+    "code": "727",
+    "state_id": 15,
+    "name": "Saitual"
+  },
+  {
+    "id": 268,
+    "code": "268",
+    "state_id": 15,
+    "name": "Serchhip"
+  },
+  {
+    "id": 267,
+    "code": "267",
+    "state_id": 15,
+    "name": "Siaha"
+  },
+  {
+    "id": 269,
+    "code": "269",
+    "state_id": 16,
+    "name": "Dhalai"
+  },
+  {
+    "id": 654,
+    "code": "654",
+    "state_id": 16,
+    "name": "Gomati"
+  },
+  {
+    "id": 652,
+    "code": "652",
+    "state_id": 16,
+    "name": "Khowai"
+  },
+  {
+    "id": 270,
+    "code": "270",
+    "state_id": 16,
+    "name": "North Tripura"
+  },
+  {
+    "id": 653,
+    "code": "653",
+    "state_id": 16,
+    "name": "Sepahijala"
+  },
+  {
+    "id": 271,
+    "code": "271",
+    "state_id": 16,
+    "name": "South Tripura"
+  },
+  {
+    "id": 655,
+    "code": "655",
+    "state_id": 16,
+    "name": "Unakoti"
+  },
+  {
+    "id": 272,
+    "code": "272",
+    "state_id": 16,
+    "name": "West Tripura"
+  },
+  {
+    "id": 273,
+    "code": "273",
+    "state_id": 17,
+    "name": "East Garo Hills"
+  },
+  {
+    "id": 657,
+    "code": "657",
+    "state_id": 17,
+    "name": "East Jaintia Hills"
+  },
+  {
+    "id": 274,
+    "code": "274",
+    "state_id": 17,
+    "name": "East Khasi Hills"
+  },
+  {
+    "id": 740,
+    "code": "740",
+    "state_id": 17,
+    "name": "Eastern West Khasi Hills"
+  },
+  {
+    "id": 656,
+    "code": "656",
+    "state_id": 17,
+    "name": "North Garo Hills"
+  },
+  {
+    "id": 276,
+    "code": "276",
+    "state_id": 17,
+    "name": "Ri Bhoi"
+  },
+  {
+    "id": 277,
+    "code": "277",
+    "state_id": 17,
+    "name": "South Garo Hills"
+  },
+  {
+    "id": 663,
+    "code": "663",
+    "state_id": 17,
+    "name": "South West Garo Hills"
+  },
+  {
+    "id": 658,
+    "code": "658",
+    "state_id": 17,
+    "name": "South West Khasi Hills"
+  },
+  {
+    "id": 278,
+    "code": "278",
+    "state_id": 17,
+    "name": "West Garo Hills"
+  },
+  {
+    "id": 275,
+    "code": "275",
+    "state_id": 17,
+    "name": "West Jaintia Hills"
+  },
+  {
+    "id": 279,
+    "code": "279",
+    "state_id": 17,
+    "name": "West Khasi Hills"
+  },
+  {
+    "id": 739,
+    "code": "739",
+    "state_id": 18,
+    "name": "Bajali"
+  },
+  {
+    "id": 616,
+    "code": "616",
+    "state_id": 18,
+    "name": "Baksa"
+  },
+  {
+    "id": 280,
+    "code": "280",
+    "state_id": 18,
+    "name": "Barpeta"
+  },
+  {
+    "id": 705,
+    "code": "705",
+    "state_id": 18,
+    "name": "Biswanath"
+  },
+  {
+    "id": 281,
+    "code": "281",
+    "state_id": 18,
+    "name": "Bongaigaon"
+  },
+  {
+    "id": 282,
+    "code": "282",
+    "state_id": 18,
+    "name": "Cachar"
+  },
+  {
+    "id": 708,
+    "code": "708",
+    "state_id": 18,
+    "name": "Charaideo"
+  },
+  {
+    "id": 612,
+    "code": "612",
+    "state_id": 18,
+    "name": "Chirang"
+  },
+  {
+    "id": 283,
+    "code": "283",
+    "state_id": 18,
+    "name": "Darrang"
+  },
+  {
+    "id": 284,
+    "code": "284",
+    "state_id": 18,
+    "name": "Dhemaji"
+  },
+  {
+    "id": 285,
+    "code": "285",
+    "state_id": 18,
+    "name": "Dhubri"
+  },
+  {
+    "id": 286,
+    "code": "286",
+    "state_id": 18,
+    "name": "Dibrugarh"
+  },
+  {
+    "id": 299,
+    "code": "299",
+    "state_id": 18,
+    "name": "Dima Hasao"
+  },
+  {
+    "id": 287,
+    "code": "287",
+    "state_id": 18,
+    "name": "Goalpara"
+  },
+  {
+    "id": 288,
+    "code": "288",
+    "state_id": 18,
+    "name": "Golaghat"
+  },
+  {
+    "id": 289,
+    "code": "289",
+    "state_id": 18,
+    "name": "Hailakandi"
+  },
+  {
+    "id": 709,
+    "code": "709",
+    "state_id": 18,
+    "name": "Hojai"
+  },
+  {
+    "id": 290,
+    "code": "290",
+    "state_id": 18,
+    "name": "Jorhat"
+  },
+  {
+    "id": 291,
+    "code": "291",
+    "state_id": 18,
+    "name": "Kamrup"
+  },
+  {
+    "id": 618,
+    "code": "618",
+    "state_id": 18,
+    "name": "Kamrup Metro"
+  },
+  {
+    "id": 292,
+    "code": "292",
+    "state_id": 18,
+    "name": "Karbi Anglong"
+  },
+  {
+    "id": 294,
+    "code": "294",
+    "state_id": 18,
+    "name": "Kokrajhar"
+  },
+  {
+    "id": 295,
+    "code": "295",
+    "state_id": 18,
+    "name": "Lakhimpur"
+  },
+  {
+    "id": 706,
+    "code": "706",
+    "state_id": 18,
+    "name": "Majuli"
+  },
+  {
+    "id": 296,
+    "code": "296",
+    "state_id": 18,
+    "name": "Marigaon"
+  },
+  {
+    "id": 297,
+    "code": "297",
+    "state_id": 18,
+    "name": "Nagaon"
+  },
+  {
+    "id": 298,
+    "code": "298",
+    "state_id": 18,
+    "name": "Nalbari"
+  },
+  {
+    "id": 300,
+    "code": "300",
+    "state_id": 18,
+    "name": "Sivasagar"
+  },
+  {
+    "id": 301,
+    "code": "301",
+    "state_id": 18,
+    "name": "Sonitpur"
+  },
+  {
+    "id": 707,
+    "code": "707",
+    "state_id": 18,
+    "name": "South Salmara Mancachar"
+  },
+  {
+    "id": 293,
+    "code": "293",
+    "state_id": 18,
+    "name": "Sribhumi"
+  },
+  {
+    "id": 756,
+    "code": "756",
+    "state_id": 18,
+    "name": "Tamulpur"
+  },
+  {
+    "id": 302,
+    "code": "302",
+    "state_id": 18,
+    "name": "Tinsukia"
+  },
+  {
+    "id": 617,
+    "code": "617",
+    "state_id": 18,
+    "name": "Udalguri"
+  },
+  {
+    "id": 710,
+    "code": "710",
+    "state_id": 18,
+    "name": "West Karbi Anglong"
+  },
+  {
+    "id": 664,
+    "code": "664",
+    "state_id": 19,
+    "name": "Alipurduar"
+  },
+  {
+    "id": 305,
+    "code": "305",
+    "state_id": 19,
+    "name": "Bankura"
+  },
+  {
+    "id": 307,
+    "code": "307",
+    "state_id": 19,
+    "name": "Birbhum"
+  },
+  {
+    "id": 308,
+    "code": "308",
+    "state_id": 19,
+    "name": "Cooch Behar"
+  },
+  {
+    "id": 310,
+    "code": "310",
+    "state_id": 19,
+    "name": "Dakshin Dinajpur"
+  },
+  {
+    "id": 309,
+    "code": "309",
+    "state_id": 19,
+    "name": "Darjeeling"
+  },
+  {
+    "id": 312,
+    "code": "312",
+    "state_id": 19,
+    "name": "Hooghly"
+  },
+  {
+    "id": 313,
+    "code": "313",
+    "state_id": 19,
+    "name": "Howrah"
+  },
+  {
+    "id": 314,
+    "code": "314",
+    "state_id": 19,
+    "name": "Jalpaiguri"
+  },
+  {
+    "id": 703,
+    "code": "703",
+    "state_id": 19,
+    "name": "Jhargram"
+  },
+  {
+    "id": 702,
+    "code": "702",
+    "state_id": 19,
+    "name": "Kalimpong"
+  },
+  {
+    "id": 315,
+    "code": "315",
+    "state_id": 19,
+    "name": "Kolkata"
+  },
+  {
+    "id": 316,
+    "code": "316",
+    "state_id": 19,
+    "name": "Malda"
+  },
+  {
+    "id": 319,
+    "code": "319",
+    "state_id": 19,
+    "name": "Murshidabad"
+  },
+  {
+    "id": 320,
+    "code": "320",
+    "state_id": 19,
+    "name": "Nadia"
+  },
+  {
+    "id": 303,
+    "code": "303",
+    "state_id": 19,
+    "name": "North 24 Parganas"
+  },
+  {
+    "id": 704,
+    "code": "704",
+    "state_id": 19,
+    "name": "Paschim Bardhaman"
+  },
+  {
+    "id": 318,
+    "code": "318",
+    "state_id": 19,
+    "name": "Paschim Medinipur"
+  },
+  {
+    "id": 306,
+    "code": "306",
+    "state_id": 19,
+    "name": "Purba Bardhaman"
+  },
+  {
+    "id": 317,
+    "code": "317",
+    "state_id": 19,
+    "name": "Purba Medinipur"
+  },
+  {
+    "id": 321,
+    "code": "321",
+    "state_id": 19,
+    "name": "Purulia"
+  },
+  {
+    "id": 304,
+    "code": "304",
+    "state_id": 19,
+    "name": "South 24 Parganas"
+  },
+  {
+    "id": 311,
+    "code": "311",
+    "state_id": 19,
+    "name": "Uttar Dinajpur"
+  },
+  {
+    "id": 322,
+    "code": "322",
+    "state_id": 20,
+    "name": "Bokaro"
+  },
+  {
+    "id": 323,
+    "code": "323",
+    "state_id": 20,
+    "name": "Chatra"
+  },
+  {
+    "id": 324,
+    "code": "324",
+    "state_id": 20,
+    "name": "Deoghar"
+  },
+  {
+    "id": 325,
+    "code": "325",
+    "state_id": 20,
+    "name": "Dhanbad"
+  },
+  {
+    "id": 326,
+    "code": "326",
+    "state_id": 20,
+    "name": "Dumka"
+  },
+  {
+    "id": 327,
+    "code": "327",
+    "state_id": 20,
+    "name": "East Singhbum"
+  },
+  {
+    "id": 328,
+    "code": "328",
+    "state_id": 20,
+    "name": "Garhwa"
+  },
+  {
+    "id": 329,
+    "code": "329",
+    "state_id": 20,
+    "name": "Giridih"
+  },
+  {
+    "id": 330,
+    "code": "330",
+    "state_id": 20,
+    "name": "Godda"
+  },
+  {
+    "id": 331,
+    "code": "331",
+    "state_id": 20,
+    "name": "Gumla"
+  },
+  {
+    "id": 332,
+    "code": "332",
+    "state_id": 20,
+    "name": "Hazaribagh"
+  },
+  {
+    "id": 333,
+    "code": "333",
+    "state_id": 20,
+    "name": "Jamtara"
+  },
+  {
+    "id": 606,
+    "code": "606",
+    "state_id": 20,
+    "name": "Khunti"
+  },
+  {
+    "id": 334,
+    "code": "334",
+    "state_id": 20,
+    "name": "Koderma"
+  },
+  {
+    "id": 335,
+    "code": "335",
+    "state_id": 20,
+    "name": "Latehar"
+  },
+  {
+    "id": 336,
+    "code": "336",
+    "state_id": 20,
+    "name": "Lohardaga"
+  },
+  {
+    "id": 337,
+    "code": "337",
+    "state_id": 20,
+    "name": "Pakur"
+  },
+  {
+    "id": 338,
+    "code": "338",
+    "state_id": 20,
+    "name": "Palamu"
+  },
+  {
+    "id": 607,
+    "code": "607",
+    "state_id": 20,
+    "name": "Ramgarh"
+  },
+  {
+    "id": 339,
+    "code": "339",
+    "state_id": 20,
+    "name": "Ranchi"
+  },
+  {
+    "id": 340,
+    "code": "340",
+    "state_id": 20,
+    "name": "Sahebganj"
+  },
+  {
+    "id": 341,
+    "code": "341",
+    "state_id": 20,
+    "name": "Saraikela Kharsawan"
+  },
+  {
+    "id": 342,
+    "code": "342",
+    "state_id": 20,
+    "name": "Simdega"
+  },
+  {
+    "id": 343,
+    "code": "343",
+    "state_id": 20,
+    "name": "West Singhbhum"
+  },
+  {
+    "id": 344,
+    "code": "344",
+    "state_id": 21,
+    "name": "Anugola"
+  },
+  {
+    "id": 345,
+    "code": "345",
+    "state_id": 21,
+    "name": "Balangir"
+  },
+  {
+    "id": 346,
+    "code": "346",
+    "state_id": 21,
+    "name": "Baleshwar"
+  },
+  {
+    "id": 347,
+    "code": "347",
+    "state_id": 21,
+    "name": "Baragada"
+  },
+  {
+    "id": 348,
+    "code": "348",
+    "state_id": 21,
+    "name": "Bhadrak"
+  },
+  {
+    "id": 349,
+    "code": "349",
+    "state_id": 21,
+    "name": "Boudh"
+  },
+  {
+    "id": 351,
+    "code": "351",
+    "state_id": 21,
+    "name": "Debagada"
+  },
+  {
+    "id": 352,
+    "code": "352",
+    "state_id": 21,
+    "name": "Dhenkanal"
+  },
+  {
+    "id": 353,
+    "code": "353",
+    "state_id": 21,
+    "name": "Gajapati"
+  },
+  {
+    "id": 354,
+    "code": "354",
+    "state_id": 21,
+    "name": "Ganjam"
+  },
+  {
+    "id": 355,
+    "code": "355",
+    "state_id": 21,
+    "name": "Jagatsinghapur"
+  },
+  {
+    "id": 356,
+    "code": "356",
+    "state_id": 21,
+    "name": "Jajpur"
+  },
+  {
+    "id": 357,
+    "code": "357",
+    "state_id": 21,
+    "name": "Jharsuguda"
+  },
+  {
+    "id": 358,
+    "code": "358",
+    "state_id": 21,
+    "name": "Kalahandi"
+  },
+  {
+    "id": 359,
+    "code": "359",
+    "state_id": 21,
+    "name": "Kandhamala"
+  },
+  {
+    "id": 350,
+    "code": "350",
+    "state_id": 21,
+    "name": "Kataka"
+  },
+  {
+    "id": 360,
+    "code": "360",
+    "state_id": 21,
+    "name": "Kendrapada"
+  },
+  {
+    "id": 361,
+    "code": "361",
+    "state_id": 21,
+    "name": "Kendujhar"
+  },
+  {
+    "id": 362,
+    "code": "362",
+    "state_id": 21,
+    "name": "Khordha"
+  },
+  {
+    "id": 363,
+    "code": "363",
+    "state_id": 21,
+    "name": "Koraput"
+  },
+  {
+    "id": 364,
+    "code": "364",
+    "state_id": 21,
+    "name": "Malkangiri"
+  },
+  {
+    "id": 365,
+    "code": "365",
+    "state_id": 21,
+    "name": "Mayurbhanj"
+  },
+  {
+    "id": 366,
+    "code": "366",
+    "state_id": 21,
+    "name": "Nabarangpur"
+  },
+  {
+    "id": 367,
+    "code": "367",
+    "state_id": 21,
+    "name": "Nayagada"
+  },
+  {
+    "id": 368,
+    "code": "368",
+    "state_id": 21,
+    "name": "Nuapada"
+  },
+  {
+    "id": 369,
+    "code": "369",
+    "state_id": 21,
+    "name": "Puri"
+  },
+  {
+    "id": 370,
+    "code": "370",
+    "state_id": 21,
+    "name": "Rayagada"
+  },
+  {
+    "id": 371,
+    "code": "371",
+    "state_id": 21,
+    "name": "Sambalpur"
+  },
+  {
+    "id": 372,
+    "code": "372",
+    "state_id": 21,
+    "name": "Subarnapur"
+  },
+  {
+    "id": 373,
+    "code": "373",
+    "state_id": 21,
+    "name": "Sundaragada"
+  },
+  {
+    "id": 646,
+    "code": "646",
+    "state_id": 22,
+    "name": "Balod"
+  },
+  {
+    "id": 644,
+    "code": "644",
+    "state_id": 22,
+    "name": "Balodabazar-Bhatapara"
+  },
+  {
+    "id": 649,
+    "code": "649",
+    "state_id": 22,
+    "name": "Balrampur-Ramanujganj"
+  },
+  {
+    "id": 374,
+    "code": "374",
+    "state_id": 22,
+    "name": "Bastar"
+  },
+  {
+    "id": 650,
+    "code": "650",
+    "state_id": 22,
+    "name": "Bemetara"
+  },
+  {
+    "id": 636,
+    "code": "636",
+    "state_id": 22,
+    "name": "Bijapur"
+  },
+  {
+    "id": 375,
+    "code": "375",
+    "state_id": 22,
+    "name": "Bilaspur"
+  },
+  {
+    "id": 376,
+    "code": "376",
+    "state_id": 22,
+    "name": "Dakshin Bastar Dantewada"
+  },
+  {
+    "id": 377,
+    "code": "377",
+    "state_id": 22,
+    "name": "Dhamtari"
+  },
+  {
+    "id": 378,
+    "code": "378",
+    "state_id": 22,
+    "name": "Durg"
+  },
+  {
+    "id": 645,
+    "code": "645",
+    "state_id": 22,
+    "name": "Gariyaband"
+  },
+  {
+    "id": 734,
+    "code": "734",
+    "state_id": 22,
+    "name": "Gaurela-Pendra-Marwahi"
+  },
+  {
+    "id": 379,
+    "code": "379",
+    "state_id": 22,
+    "name": "Janjgir-Champa"
+  },
+  {
+    "id": 380,
+    "code": "380",
+    "state_id": 22,
+    "name": "Jashpur"
+  },
+  {
+    "id": 382,
+    "code": "382",
+    "state_id": 22,
+    "name": "Kabeerdham"
+  },
+  {
+    "id": 759,
+    "code": "759",
+    "state_id": 22,
+    "name": "Khairagarh-Chhuikhadan-Gandai"
+  },
+  {
+    "id": 643,
+    "code": "643",
+    "state_id": 22,
+    "name": "Kondagaon"
+  },
+  {
+    "id": 383,
+    "code": "383",
+    "state_id": 22,
+    "name": "Korba"
+  },
+  {
+    "id": 384,
+    "code": "384",
+    "state_id": 22,
+    "name": "Korea"
+  },
+  {
+    "id": 385,
+    "code": "385",
+    "state_id": 22,
+    "name": "Mahasamund"
+  },
+  {
+    "id": 760,
+    "code": "760",
+    "state_id": 22,
+    "name": "Manendragarh-Chirmiri-Bharatpur(M C B)"
+  },
+  {
+    "id": 761,
+    "code": "761",
+    "state_id": 22,
+    "name": "Mohla-Manpur-Ambagarh Chouki"
+  },
+  {
+    "id": 647,
+    "code": "647",
+    "state_id": 22,
+    "name": "Mungeli"
+  },
+  {
+    "id": 637,
+    "code": "637",
+    "state_id": 22,
+    "name": "Narayanpur"
+  },
+  {
+    "id": 386,
+    "code": "386",
+    "state_id": 22,
+    "name": "Raigarh"
+  },
+  {
+    "id": 387,
+    "code": "387",
+    "state_id": 22,
+    "name": "Raipur"
+  },
+  {
+    "id": 388,
+    "code": "388",
+    "state_id": 22,
+    "name": "Rajnandgaon"
+  },
+  {
+    "id": 762,
+    "code": "762",
+    "state_id": 22,
+    "name": "Sakti"
+  },
+  {
+    "id": 763,
+    "code": "763",
+    "state_id": 22,
+    "name": "Sarangarh-Bilaigarh"
+  },
+  {
+    "id": 642,
+    "code": "642",
+    "state_id": 22,
+    "name": "Sukma"
+  },
+  {
+    "id": 648,
+    "code": "648",
+    "state_id": 22,
+    "name": "Surajpur"
+  },
+  {
+    "id": 389,
+    "code": "389",
+    "state_id": 22,
+    "name": "Surguja"
+  },
+  {
+    "id": 381,
+    "code": "381",
+    "state_id": 22,
+    "name": "Uttar Bastar Kanker"
+  },
+  {
+    "id": 667,
+    "code": "667",
+    "state_id": 23,
+    "name": "Agar-Malwa"
+  },
+  {
+    "id": 639,
+    "code": "639",
+    "state_id": 23,
+    "name": "Alirajpur"
+  },
+  {
+    "id": 390,
+    "code": "390",
+    "state_id": 23,
+    "name": "Anuppur"
+  },
+  {
+    "id": 391,
+    "code": "391",
+    "state_id": 23,
+    "name": "Ashoknagar"
+  },
+  {
+    "id": 392,
+    "code": "392",
+    "state_id": 23,
+    "name": "Balaghat"
+  },
+  {
+    "id": 393,
+    "code": "393",
+    "state_id": 23,
+    "name": "Barwani"
+  },
+  {
+    "id": 394,
+    "code": "394",
+    "state_id": 23,
+    "name": "Betul"
+  },
+  {
+    "id": 395,
+    "code": "395",
+    "state_id": 23,
+    "name": "Bhind"
+  },
+  {
+    "id": 396,
+    "code": "396",
+    "state_id": 23,
+    "name": "Bhopal"
+  },
+  {
+    "id": 397,
+    "code": "397",
+    "state_id": 23,
+    "name": "Burhanpur"
+  },
+  {
+    "id": 398,
+    "code": "398",
+    "state_id": 23,
+    "name": "Chhatarpur"
+  },
+  {
+    "id": 399,
+    "code": "399",
+    "state_id": 23,
+    "name": "Chhindwara"
+  },
+  {
+    "id": 400,
+    "code": "400",
+    "state_id": 23,
+    "name": "Damoh"
+  },
+  {
+    "id": 401,
+    "code": "401",
+    "state_id": 23,
+    "name": "Datia"
+  },
+  {
+    "id": 402,
+    "code": "402",
+    "state_id": 23,
+    "name": "Dewas"
+  },
+  {
+    "id": 403,
+    "code": "403",
+    "state_id": 23,
+    "name": "Dhar"
+  },
+  {
+    "id": 404,
+    "code": "404",
+    "state_id": 23,
+    "name": "Dindori"
+  },
+  {
+    "id": 406,
+    "code": "406",
+    "state_id": 23,
+    "name": "Guna"
+  },
+  {
+    "id": 407,
+    "code": "407",
+    "state_id": 23,
+    "name": "Gwalior"
+  },
+  {
+    "id": 408,
+    "code": "408",
+    "state_id": 23,
+    "name": "Harda"
+  },
+  {
+    "id": 410,
+    "code": "410",
+    "state_id": 23,
+    "name": "Indore"
+  },
+  {
+    "id": 411,
+    "code": "411",
+    "state_id": 23,
+    "name": "Jabalpur"
+  },
+  {
+    "id": 412,
+    "code": "412",
+    "state_id": 23,
+    "name": "Jhabua"
+  },
+  {
+    "id": 413,
+    "code": "413",
+    "state_id": 23,
+    "name": "Katni"
+  },
+  {
+    "id": 405,
+    "code": "405",
+    "state_id": 23,
+    "name": "Khandwa (East Nimar)"
+  },
+  {
+    "id": 414,
+    "code": "414",
+    "state_id": 23,
+    "name": "Khargone (West Nimar)"
+  },
+  {
+    "id": 766,
+    "code": "766",
+    "state_id": 23,
+    "name": "MAUGANJ"
+  },
+  {
+    "id": 784,
+    "code": "784",
+    "state_id": 23,
+    "name": "Maihar"
+  },
+  {
+    "id": 415,
+    "code": "415",
+    "state_id": 23,
+    "name": "Mandla"
+  },
+  {
+    "id": 416,
+    "code": "416",
+    "state_id": 23,
+    "name": "Mandsaur"
+  },
+  {
+    "id": 417,
+    "code": "417",
+    "state_id": 23,
+    "name": "Morena"
+  },
+  {
+    "id": 409,
+    "code": "409",
+    "state_id": 23,
+    "name": "Narmadapuram"
+  },
+  {
+    "id": 418,
+    "code": "418",
+    "state_id": 23,
+    "name": "Narsimhapur"
+  },
+  {
+    "id": 419,
+    "code": "419",
+    "state_id": 23,
+    "name": "Neemuch"
+  },
+  {
+    "id": 722,
+    "code": "722",
+    "state_id": 23,
+    "name": "Niwari"
+  },
+  {
+    "id": 785,
+    "code": "785",
+    "state_id": 23,
+    "name": "Pandhurna"
+  },
+  {
+    "id": 420,
+    "code": "420",
+    "state_id": 23,
+    "name": "Panna"
+  },
+  {
+    "id": 421,
+    "code": "421",
+    "state_id": 23,
+    "name": "Raisen"
+  },
+  {
+    "id": 422,
+    "code": "422",
+    "state_id": 23,
+    "name": "Rajgarh"
+  },
+  {
+    "id": 423,
+    "code": "423",
+    "state_id": 23,
+    "name": "Ratlam"
+  },
+  {
+    "id": 424,
+    "code": "424",
+    "state_id": 23,
+    "name": "Rewa"
+  },
+  {
+    "id": 425,
+    "code": "425",
+    "state_id": 23,
+    "name": "Sagar"
+  },
+  {
+    "id": 426,
+    "code": "426",
+    "state_id": 23,
+    "name": "Satna"
+  },
+  {
+    "id": 427,
+    "code": "427",
+    "state_id": 23,
+    "name": "Sehore"
+  },
+  {
+    "id": 428,
+    "code": "428",
+    "state_id": 23,
+    "name": "Seoni"
+  },
+  {
+    "id": 429,
+    "code": "429",
+    "state_id": 23,
+    "name": "Shahdol"
+  },
+  {
+    "id": 430,
+    "code": "430",
+    "state_id": 23,
+    "name": "Shajapur"
+  },
+  {
+    "id": 431,
+    "code": "431",
+    "state_id": 23,
+    "name": "Sheopur"
+  },
+  {
+    "id": 432,
+    "code": "432",
+    "state_id": 23,
+    "name": "Shivpuri"
+  },
+  {
+    "id": 433,
+    "code": "433",
+    "state_id": 23,
+    "name": "Sidhi"
+  },
+  {
+    "id": 638,
+    "code": "638",
+    "state_id": 23,
+    "name": "Singrauli"
+  },
+  {
+    "id": 434,
+    "code": "434",
+    "state_id": 23,
+    "name": "Tikamgarh"
+  },
+  {
+    "id": 435,
+    "code": "435",
+    "state_id": 23,
+    "name": "Ujjain"
+  },
+  {
+    "id": 436,
+    "code": "436",
+    "state_id": 23,
+    "name": "Umaria"
+  },
+  {
+    "id": 437,
+    "code": "437",
+    "state_id": 23,
+    "name": "Vidisha"
+  },
+  {
+    "id": 438,
+    "code": "438",
+    "state_id": 24,
+    "name": "Ahmedabad"
+  },
+  {
+    "id": 439,
+    "code": "439",
+    "state_id": 24,
+    "name": "Amreli"
+  },
+  {
+    "id": 440,
+    "code": "440",
+    "state_id": 24,
+    "name": "Anand"
+  },
+  {
+    "id": 672,
+    "code": "672",
+    "state_id": 24,
+    "name": "Arvalli"
+  },
+  {
+    "id": 441,
+    "code": "441",
+    "state_id": 24,
+    "name": "Banas Kantha"
+  },
+  {
+    "id": 442,
+    "code": "442",
+    "state_id": 24,
+    "name": "Bharuch"
+  },
+  {
+    "id": 443,
+    "code": "443",
+    "state_id": 24,
+    "name": "Bhavnagar"
+  },
+  {
+    "id": 676,
+    "code": "676",
+    "state_id": 24,
+    "name": "Botad"
+  },
+  {
+    "id": 668,
+    "code": "668",
+    "state_id": 24,
+    "name": "Chhotaudepur"
+  },
+  {
+    "id": 445,
+    "code": "445",
+    "state_id": 24,
+    "name": "Dahod"
+  },
+  {
+    "id": 444,
+    "code": "444",
+    "state_id": 24,
+    "name": "Dangs"
+  },
+  {
+    "id": 674,
+    "code": "674",
+    "state_id": 24,
+    "name": "Devbhumi Dwarka"
+  },
+  {
+    "id": 446,
+    "code": "446",
+    "state_id": 24,
+    "name": "Gandhinagar"
+  },
+  {
+    "id": 675,
+    "code": "675",
+    "state_id": 24,
+    "name": "Gir Somnath"
+  },
+  {
+    "id": 447,
+    "code": "447",
+    "state_id": 24,
+    "name": "Jamnagar"
+  },
+  {
+    "id": 448,
+    "code": "448",
+    "state_id": 24,
+    "name": "Junagadh"
+  },
+  {
+    "id": 449,
+    "code": "449",
+    "state_id": 24,
+    "name": "Kachchh"
+  },
+  {
+    "id": 450,
+    "code": "450",
+    "state_id": 24,
+    "name": "Kheda"
+  },
+  {
+    "id": 451,
+    "code": "451",
+    "state_id": 24,
+    "name": "Mahesana"
+  },
+  {
+    "id": 669,
+    "code": "669",
+    "state_id": 24,
+    "name": "Mahisagar"
+  },
+  {
+    "id": 673,
+    "code": "673",
+    "state_id": 24,
+    "name": "Morbi"
+  },
+  {
+    "id": 452,
+    "code": "452",
+    "state_id": 24,
+    "name": "Narmada"
+  },
+  {
+    "id": 453,
+    "code": "453",
+    "state_id": 24,
+    "name": "Navsari"
+  },
+  {
+    "id": 454,
+    "code": "454",
+    "state_id": 24,
+    "name": "Panch Mahals"
+  },
+  {
+    "id": 455,
+    "code": "455",
+    "state_id": 24,
+    "name": "Patan"
+  },
+  {
+    "id": 456,
+    "code": "456",
+    "state_id": 24,
+    "name": "Porbandar"
+  },
+  {
+    "id": 457,
+    "code": "457",
+    "state_id": 24,
+    "name": "Rajkot"
+  },
+  {
+    "id": 458,
+    "code": "458",
+    "state_id": 24,
+    "name": "Sabar Kantha"
+  },
+  {
+    "id": 459,
+    "code": "459",
+    "state_id": 24,
+    "name": "Surat"
+  },
+  {
+    "id": 460,
+    "code": "460",
+    "state_id": 24,
+    "name": "Surendranagar"
+  },
+  {
+    "id": 641,
+    "code": "641",
+    "state_id": 24,
+    "name": "Tapi"
+  },
+  {
+    "id": 461,
+    "code": "461",
+    "state_id": 24,
+    "name": "Vadodara"
+  },
+  {
+    "id": 462,
+    "code": "462",
+    "state_id": 24,
+    "name": "Valsad"
+  },
+  {
+    "id": 789,
+    "code": "789",
+    "state_id": 24,
+    "name": "Vav-Tharad"
+  },
+  {
+    "id": 466,
+    "code": "466",
+    "state_id": 27,
+    "name": "Ahilyanagar"
+  },
+  {
+    "id": 467,
+    "code": "467",
+    "state_id": 27,
+    "name": "Akola"
+  },
+  {
+    "id": 468,
+    "code": "468",
+    "state_id": 27,
+    "name": "Amravati"
+  },
+  {
+    "id": 470,
+    "code": "470",
+    "state_id": 27,
+    "name": "Beed"
+  },
+  {
+    "id": 471,
+    "code": "471",
+    "state_id": 27,
+    "name": "Bhandara"
+  },
+  {
+    "id": 472,
+    "code": "472",
+    "state_id": 27,
+    "name": "Buldhana"
+  },
+  {
+    "id": 473,
+    "code": "473",
+    "state_id": 27,
+    "name": "Chandrapur"
+  },
+  {
+    "id": 469,
+    "code": "469",
+    "state_id": 27,
+    "name": "Chhatrapati Sambhajinagar"
+  },
+  {
+    "id": 488,
+    "code": "488",
+    "state_id": 27,
+    "name": "Dharashiv"
+  },
+  {
+    "id": 474,
+    "code": "474",
+    "state_id": 27,
+    "name": "Dhule"
+  },
+  {
+    "id": 475,
+    "code": "475",
+    "state_id": 27,
+    "name": "Gadchiroli"
+  },
+  {
+    "id": 476,
+    "code": "476",
+    "state_id": 27,
+    "name": "Gondia"
+  },
+  {
+    "id": 477,
+    "code": "477",
+    "state_id": 27,
+    "name": "Hingoli"
+  },
+  {
+    "id": 478,
+    "code": "478",
+    "state_id": 27,
+    "name": "Jalgaon"
+  },
+  {
+    "id": 479,
+    "code": "479",
+    "state_id": 27,
+    "name": "Jalna"
+  },
+  {
+    "id": 480,
+    "code": "480",
+    "state_id": 27,
+    "name": "Kolhapur"
+  },
+  {
+    "id": 481,
+    "code": "481",
+    "state_id": 27,
+    "name": "Latur"
+  },
+  {
+    "id": 482,
+    "code": "482",
+    "state_id": 27,
+    "name": "Mumbai"
+  },
+  {
+    "id": 483,
+    "code": "483",
+    "state_id": 27,
+    "name": "Mumbai Suburban"
+  },
+  {
+    "id": 484,
+    "code": "484",
+    "state_id": 27,
+    "name": "Nagpur"
+  },
+  {
+    "id": 485,
+    "code": "485",
+    "state_id": 27,
+    "name": "Nanded"
+  },
+  {
+    "id": 486,
+    "code": "486",
+    "state_id": 27,
+    "name": "Nandurbar"
+  },
+  {
+    "id": 487,
+    "code": "487",
+    "state_id": 27,
+    "name": "Nashik"
+  },
+  {
+    "id": 665,
+    "code": "665",
+    "state_id": 27,
+    "name": "Palghar"
+  },
+  {
+    "id": 489,
+    "code": "489",
+    "state_id": 27,
+    "name": "Parbhani"
+  },
+  {
+    "id": 490,
+    "code": "490",
+    "state_id": 27,
+    "name": "Pune"
+  },
+  {
+    "id": 491,
+    "code": "491",
+    "state_id": 27,
+    "name": "Raigad"
+  },
+  {
+    "id": 492,
+    "code": "492",
+    "state_id": 27,
+    "name": "Ratnagiri"
+  },
+  {
+    "id": 493,
+    "code": "493",
+    "state_id": 27,
+    "name": "Sangli"
+  },
+  {
+    "id": 494,
+    "code": "494",
+    "state_id": 27,
+    "name": "Satara"
+  },
+  {
+    "id": 495,
+    "code": "495",
+    "state_id": 27,
+    "name": "Sindhudurg"
+  },
+  {
+    "id": 496,
+    "code": "496",
+    "state_id": 27,
+    "name": "Solapur"
+  },
+  {
+    "id": 497,
+    "code": "497",
+    "state_id": 27,
+    "name": "Thane"
+  },
+  {
+    "id": 498,
+    "code": "498",
+    "state_id": 27,
+    "name": "Wardha"
+  },
+  {
+    "id": 499,
+    "code": "499",
+    "state_id": 27,
+    "name": "Washim"
+  },
+  {
+    "id": 500,
+    "code": "500",
+    "state_id": 27,
+    "name": "Yavatmal"
+  },
+  {
+    "id": 745,
+    "code": "745",
+    "state_id": 28,
+    "name": "Alluri Sitharama Raju"
+  },
+  {
+    "id": 744,
+    "code": "744",
+    "state_id": 28,
+    "name": "Anakapalli"
+  },
+  {
+    "id": 502,
+    "code": "502",
+    "state_id": 28,
+    "name": "Ananthapuramu"
+  },
+  {
+    "id": 753,
+    "code": "753",
+    "state_id": 28,
+    "name": "Annamayya"
+  },
+  {
+    "id": 750,
+    "code": "750",
+    "state_id": 28,
+    "name": "Bapatla"
+  },
+  {
+    "id": 503,
+    "code": "503",
+    "state_id": 28,
+    "name": "Chittoor"
+  },
+  {
+    "id": 747,
+    "code": "747",
+    "state_id": 28,
+    "name": "Dr. B.R. Ambedkar Konaseema"
+  },
+  {
+    "id": 505,
+    "code": "505",
+    "state_id": 28,
+    "name": "East Godavari"
+  },
+  {
+    "id": 748,
+    "code": "748",
+    "state_id": 28,
+    "name": "Eluru"
+  },
+  {
+    "id": 506,
+    "code": "506",
+    "state_id": 28,
+    "name": "Guntur"
+  },
+  {
+    "id": 746,
+    "code": "746",
+    "state_id": 28,
+    "name": "Kakinada"
+  },
+  {
+    "id": 510,
+    "code": "510",
+    "state_id": 28,
+    "name": "Krishna"
+  },
+  {
+    "id": 511,
+    "code": "511",
+    "state_id": 28,
+    "name": "Kurnool"
+  },
+  {
+    "id": 790,
+    "code": "790",
+    "state_id": 28,
+    "name": "Markapuram"
+  },
+  {
+    "id": 755,
+    "code": "755",
+    "state_id": 28,
+    "name": "Nandyal"
+  },
+  {
+    "id": 749,
+    "code": "749",
+    "state_id": 28,
+    "name": "Ntr"
+  },
+  {
+    "id": 751,
+    "code": "751",
+    "state_id": 28,
+    "name": "Palnadu"
+  },
+  {
+    "id": 743,
+    "code": "743",
+    "state_id": 28,
+    "name": "Parvathipuram Manyam"
+  },
+  {
+    "id": 791,
+    "code": "791",
+    "state_id": 28,
+    "name": "Polavaram"
+  },
+  {
+    "id": 517,
+    "code": "517",
+    "state_id": 28,
+    "name": "Prakasam"
+  },
+  {
+    "id": 515,
+    "code": "515",
+    "state_id": 28,
+    "name": "Sri Potti Sriramulu Nellore"
+  },
+  {
+    "id": 754,
+    "code": "754",
+    "state_id": 28,
+    "name": "Sri Sathya Sai"
+  },
+  {
+    "id": 519,
+    "code": "519",
+    "state_id": 28,
+    "name": "Srikakulam"
+  },
+  {
+    "id": 752,
+    "code": "752",
+    "state_id": 28,
+    "name": "Tirupati"
+  },
+  {
+    "id": 520,
+    "code": "520",
+    "state_id": 28,
+    "name": "Visakhapatnam"
+  },
+  {
+    "id": 521,
+    "code": "521",
+    "state_id": 28,
+    "name": "Vizianagaram"
+  },
+  {
+    "id": 523,
+    "code": "523",
+    "state_id": 28,
+    "name": "West Godavari"
+  },
+  {
+    "id": 504,
+    "code": "504",
+    "state_id": 28,
+    "name": "Y.S.R. Kadapa"
+  },
+  {
+    "id": 524,
+    "code": "524",
+    "state_id": 29,
+    "name": "Bagalkote"
+  },
+  {
+    "id": 528,
+    "code": "528",
+    "state_id": 29,
+    "name": "Ballari"
+  },
+  {
+    "id": 527,
+    "code": "527",
+    "state_id": 29,
+    "name": "Belagavi"
+  },
+  {
+    "id": 526,
+    "code": "526",
+    "state_id": 29,
+    "name": "Bengaluru Rural"
+  },
+  {
+    "id": 631,
+    "code": "631",
+    "state_id": 29,
+    "name": "Bengaluru South"
+  },
+  {
+    "id": 525,
+    "code": "525",
+    "state_id": 29,
+    "name": "Bengaluru Urban"
+  },
+  {
+    "id": 529,
+    "code": "529",
+    "state_id": 29,
+    "name": "Bidar"
+  },
+  {
+    "id": 531,
+    "code": "531",
+    "state_id": 29,
+    "name": "Chamarajanagar"
+  },
+  {
+    "id": 630,
+    "code": "630",
+    "state_id": 29,
+    "name": "Chikkaballapura"
+  },
+  {
+    "id": 532,
+    "code": "532",
+    "state_id": 29,
+    "name": "Chikkamagaluru"
+  },
+  {
+    "id": 533,
+    "code": "533",
+    "state_id": 29,
+    "name": "Chitradurga"
+  },
+  {
+    "id": 534,
+    "code": "534",
+    "state_id": 29,
+    "name": "Dakshina Kannada"
+  },
+  {
+    "id": 535,
+    "code": "535",
+    "state_id": 29,
+    "name": "Davanagere"
+  },
+  {
+    "id": 536,
+    "code": "536",
+    "state_id": 29,
+    "name": "Dharwad"
+  },
+  {
+    "id": 537,
+    "code": "537",
+    "state_id": 29,
+    "name": "Gadag"
+  },
+  {
+    "id": 539,
+    "code": "539",
+    "state_id": 29,
+    "name": "Hassan"
+  },
+  {
+    "id": 540,
+    "code": "540",
+    "state_id": 29,
+    "name": "Haveri"
+  },
+  {
+    "id": 538,
+    "code": "538",
+    "state_id": 29,
+    "name": "Kalaburagi"
+  },
+  {
+    "id": 541,
+    "code": "541",
+    "state_id": 29,
+    "name": "Kodagu"
+  },
+  {
+    "id": 542,
+    "code": "542",
+    "state_id": 29,
+    "name": "Kolar"
+  },
+  {
+    "id": 543,
+    "code": "543",
+    "state_id": 29,
+    "name": "Koppal"
+  },
+  {
+    "id": 544,
+    "code": "544",
+    "state_id": 29,
+    "name": "Mandya"
+  },
+  {
+    "id": 545,
+    "code": "545",
+    "state_id": 29,
+    "name": "Mysuru"
+  },
+  {
+    "id": 546,
+    "code": "546",
+    "state_id": 29,
+    "name": "Raichur"
+  },
+  {
+    "id": 547,
+    "code": "547",
+    "state_id": 29,
+    "name": "Shivamogga"
+  },
+  {
+    "id": 548,
+    "code": "548",
+    "state_id": 29,
+    "name": "Tumakuru"
+  },
+  {
+    "id": 549,
+    "code": "549",
+    "state_id": 29,
+    "name": "Udupi"
+  },
+  {
+    "id": 550,
+    "code": "550",
+    "state_id": 29,
+    "name": "Uttara Kannada"
+  },
+  {
+    "id": 738,
+    "code": "738",
+    "state_id": 29,
+    "name": "Vijayanagara"
+  },
+  {
+    "id": 530,
+    "code": "530",
+    "state_id": 29,
+    "name": "Vijayapura"
+  },
+  {
+    "id": 635,
+    "code": "635",
+    "state_id": 29,
+    "name": "Yadgir"
+  },
+  {
+    "id": 793,
+    "code": "793",
+    "state_id": 30,
+    "name": "Kushavati"
+  },
+  {
+    "id": 551,
+    "code": "551",
+    "state_id": 30,
+    "name": "North Goa"
+  },
+  {
+    "id": 552,
+    "code": "552",
+    "state_id": 30,
+    "name": "South Goa"
+  },
+  {
+    "id": 553,
+    "code": "553",
+    "state_id": 31,
+    "name": "Lakshadweep District"
+  },
+  {
+    "id": 554,
+    "code": "554",
+    "state_id": 32,
+    "name": "Alappuzha"
+  },
+  {
+    "id": 555,
+    "code": "555",
+    "state_id": 32,
+    "name": "Ernakulam"
+  },
+  {
+    "id": 556,
+    "code": "556",
+    "state_id": 32,
+    "name": "Idukki"
+  },
+  {
+    "id": 557,
+    "code": "557",
+    "state_id": 32,
+    "name": "Kannur"
+  },
+  {
+    "id": 558,
+    "code": "558",
+    "state_id": 32,
+    "name": "Kasaragod"
+  },
+  {
+    "id": 559,
+    "code": "559",
+    "state_id": 32,
+    "name": "Kollam"
+  },
+  {
+    "id": 560,
+    "code": "560",
+    "state_id": 32,
+    "name": "Kottayam"
+  },
+  {
+    "id": 561,
+    "code": "561",
+    "state_id": 32,
+    "name": "Kozhikode"
+  },
+  {
+    "id": 562,
+    "code": "562",
+    "state_id": 32,
+    "name": "Malappuram"
+  },
+  {
+    "id": 563,
+    "code": "563",
+    "state_id": 32,
+    "name": "Palakkad"
+  },
+  {
+    "id": 564,
+    "code": "564",
+    "state_id": 32,
+    "name": "Pathanamthitta"
+  },
+  {
+    "id": 565,
+    "code": "565",
+    "state_id": 32,
+    "name": "Thiruvananthapuram"
+  },
+  {
+    "id": 566,
+    "code": "566",
+    "state_id": 32,
+    "name": "Thrissur"
+  },
+  {
+    "id": 567,
+    "code": "567",
+    "state_id": 32,
+    "name": "Wayanad"
+  },
+  {
+    "id": 610,
+    "code": "610",
+    "state_id": 33,
+    "name": "Ariyalur"
+  },
+  {
+    "id": 730,
+    "code": "730",
+    "state_id": 33,
+    "name": "Chengalpattu"
+  },
+  {
+    "id": 568,
+    "code": "568",
+    "state_id": 33,
+    "name": "Chennai"
+  },
+  {
+    "id": 569,
+    "code": "569",
+    "state_id": 33,
+    "name": "Coimbatore"
+  },
+  {
+    "id": 570,
+    "code": "570",
+    "state_id": 33,
+    "name": "Cuddalore"
+  },
+  {
+    "id": 571,
+    "code": "571",
+    "state_id": 33,
+    "name": "Dharmapuri"
+  },
+  {
+    "id": 572,
+    "code": "572",
+    "state_id": 33,
+    "name": "Dindigul"
+  },
+  {
+    "id": 573,
+    "code": "573",
+    "state_id": 33,
+    "name": "Erode"
+  },
+  {
+    "id": 729,
+    "code": "729",
+    "state_id": 33,
+    "name": "Kallakurichi"
+  },
+  {
+    "id": 574,
+    "code": "574",
+    "state_id": 33,
+    "name": "Kancheepuram"
+  },
+  {
+    "id": 575,
+    "code": "575",
+    "state_id": 33,
+    "name": "Kanniyakumari"
+  },
+  {
+    "id": 576,
+    "code": "576",
+    "state_id": 33,
+    "name": "Karur"
+  },
+  {
+    "id": 577,
+    "code": "577",
+    "state_id": 33,
+    "name": "Krishnagiri"
+  },
+  {
+    "id": 578,
+    "code": "578",
+    "state_id": 33,
+    "name": "Madurai"
+  },
+  {
+    "id": 735,
+    "code": "735",
+    "state_id": 33,
+    "name": "Mayiladuthurai"
+  },
+  {
+    "id": 579,
+    "code": "579",
+    "state_id": 33,
+    "name": "Nagapattinam"
+  },
+  {
+    "id": 580,
+    "code": "580",
+    "state_id": 33,
+    "name": "Namakkal"
+  },
+  {
+    "id": 581,
+    "code": "581",
+    "state_id": 33,
+    "name": "Perambalur"
+  },
+  {
+    "id": 582,
+    "code": "582",
+    "state_id": 33,
+    "name": "Pudukkottai"
+  },
+  {
+    "id": 583,
+    "code": "583",
+    "state_id": 33,
+    "name": "Ramanathapuram"
+  },
+  {
+    "id": 731,
+    "code": "731",
+    "state_id": 33,
+    "name": "Ranipet"
+  },
+  {
+    "id": 584,
+    "code": "584",
+    "state_id": 33,
+    "name": "Salem"
+  },
+  {
+    "id": 585,
+    "code": "585",
+    "state_id": 33,
+    "name": "Sivaganga"
+  },
+  {
+    "id": 733,
+    "code": "733",
+    "state_id": 33,
+    "name": "Tenkasi"
+  },
+  {
+    "id": 586,
+    "code": "586",
+    "state_id": 33,
+    "name": "Thanjavur"
+  },
+  {
+    "id": 587,
+    "code": "587",
+    "state_id": 33,
+    "name": "The Nilgiris"
+  },
+  {
+    "id": 588,
+    "code": "588",
+    "state_id": 33,
+    "name": "Theni"
+  },
+  {
+    "id": 589,
+    "code": "589",
+    "state_id": 33,
+    "name": "Thiruvallur"
+  },
+  {
+    "id": 590,
+    "code": "590",
+    "state_id": 33,
+    "name": "Thiruvarur"
+  },
+  {
+    "id": 594,
+    "code": "594",
+    "state_id": 33,
+    "name": "Thoothukkudi"
+  },
+  {
+    "id": 591,
+    "code": "591",
+    "state_id": 33,
+    "name": "Tiruchirappalli"
+  },
+  {
+    "id": 592,
+    "code": "592",
+    "state_id": 33,
+    "name": "Tirunelveli"
+  },
+  {
+    "id": 732,
+    "code": "732",
+    "state_id": 33,
+    "name": "Tirupathur"
+  },
+  {
+    "id": 634,
+    "code": "634",
+    "state_id": 33,
+    "name": "Tiruppur"
+  },
+  {
+    "id": 593,
+    "code": "593",
+    "state_id": 33,
+    "name": "Tiruvannamalai"
+  },
+  {
+    "id": 595,
+    "code": "595",
+    "state_id": 33,
+    "name": "Vellore"
+  },
+  {
+    "id": 596,
+    "code": "596",
+    "state_id": 33,
+    "name": "Viluppuram"
+  },
+  {
+    "id": 597,
+    "code": "597",
+    "state_id": 33,
+    "name": "Virudhunagar"
+  },
+  {
+    "id": 598,
+    "code": "598",
+    "state_id": 34,
+    "name": "Karaikal"
+  },
+  {
+    "id": 600,
+    "code": "600",
+    "state_id": 34,
+    "name": "Puducherry"
+  },
+  {
+    "id": 603,
+    "code": "603",
+    "state_id": 35,
+    "name": "Nicobars"
+  },
+  {
+    "id": 632,
+    "code": "632",
+    "state_id": 35,
+    "name": "North And Middle Andaman"
+  },
+  {
+    "id": 602,
+    "code": "602",
+    "state_id": 35,
+    "name": "South Andamans"
+  },
+  {
+    "id": 501,
+    "code": "501",
+    "state_id": 36,
+    "name": "Adilabad"
+  },
+  {
+    "id": 690,
+    "code": "690",
+    "state_id": 36,
+    "name": "Bhadradri Kothagudem"
+  },
+  {
+    "id": 686,
+    "code": "686",
+    "state_id": 36,
+    "name": "Hanumakonda"
+  },
+  {
+    "id": 507,
+    "code": "507",
+    "state_id": 36,
+    "name": "Hyderabad"
+  },
+  {
+    "id": 681,
+    "code": "681",
+    "state_id": 36,
+    "name": "Jagitial"
+  },
+  {
+    "id": 689,
+    "code": "689",
+    "state_id": 36,
+    "name": "Jangoan"
+  },
+  {
+    "id": 687,
+    "code": "687",
+    "state_id": 36,
+    "name": "Jayashankar Bhupalapally"
+  },
+  {
+    "id": 695,
+    "code": "695",
+    "state_id": 36,
+    "name": "Jogulamba Gadwal"
+  },
+  {
+    "id": 685,
+    "code": "685",
+    "state_id": 36,
+    "name": "Kamareddy"
+  },
+  {
+    "id": 508,
+    "code": "508",
+    "state_id": 36,
+    "name": "Karimnagar"
+  },
+  {
+    "id": 509,
+    "code": "509",
+    "state_id": 36,
+    "name": "Khammam"
+  },
+  {
+    "id": 699,
+    "code": "699",
+    "state_id": 36,
+    "name": "Kumuram Bheem Asifabad"
+  },
+  {
+    "id": 688,
+    "code": "688",
+    "state_id": 36,
+    "name": "Mahabubabad"
+  },
+  {
+    "id": 512,
+    "code": "512",
+    "state_id": 36,
+    "name": "Mahabubnagar"
+  },
+  {
+    "id": 684,
+    "code": "684",
+    "state_id": 36,
+    "name": "Mancherial"
+  },
+  {
+    "id": 513,
+    "code": "513",
+    "state_id": 36,
+    "name": "Medak"
+  },
+  {
+    "id": 700,
+    "code": "700",
+    "state_id": 36,
+    "name": "Medchal Malkajgiri"
+  },
+  {
+    "id": 720,
+    "code": "720",
+    "state_id": 36,
+    "name": "Mulugu"
+  },
+  {
+    "id": 694,
+    "code": "694",
+    "state_id": 36,
+    "name": "Nagarkurnool"
+  },
+  {
+    "id": 514,
+    "code": "514",
+    "state_id": 36,
+    "name": "Nalgonda"
+  },
+  {
+    "id": 721,
+    "code": "721",
+    "state_id": 36,
+    "name": "Narayanpet"
+  },
+  {
+    "id": 680,
+    "code": "680",
+    "state_id": 36,
+    "name": "Nirmal"
+  },
+  {
+    "id": 516,
+    "code": "516",
+    "state_id": 36,
+    "name": "Nizamabad"
+  },
+  {
+    "id": 682,
+    "code": "682",
+    "state_id": 36,
+    "name": "Peddapalli"
+  },
+  {
+    "id": 683,
+    "code": "683",
+    "state_id": 36,
+    "name": "Rajanna Sircilla"
+  },
+  {
+    "id": 518,
+    "code": "518",
+    "state_id": 36,
+    "name": "Ranga Reddy"
+  },
+  {
+    "id": 691,
+    "code": "691",
+    "state_id": 36,
+    "name": "Sangareddy"
+  },
+  {
+    "id": 692,
+    "code": "692",
+    "state_id": 36,
+    "name": "Siddipet"
+  },
+  {
+    "id": 696,
+    "code": "696",
+    "state_id": 36,
+    "name": "Suryapet"
+  },
+  {
+    "id": 698,
+    "code": "698",
+    "state_id": 36,
+    "name": "Vikarabad"
+  },
+  {
+    "id": 693,
+    "code": "693",
+    "state_id": 36,
+    "name": "Wanaparthy"
+  },
+  {
+    "id": 522,
+    "code": "522",
+    "state_id": 36,
+    "name": "Warangal"
+  },
+  {
+    "id": 697,
+    "code": "697",
+    "state_id": 36,
+    "name": "Yadadri Bhuvanagiri"
+  },
+  {
+    "id": 6,
+    "code": "6",
+    "state_id": 37,
+    "name": "Kargil"
+  },
+  {
+    "id": 9,
+    "code": "9",
+    "state_id": 37,
+    "name": "Leh Ladakh"
+  },
+  {
+    "id": 465,
+    "code": "465",
+    "state_id": 38,
+    "name": "Dadra And Nagar Haveli"
+  },
+  {
+    "id": 463,
+    "code": "463",
+    "state_id": 38,
+    "name": "Daman"
+  },
+  {
+    "id": 464,
+    "code": "464",
+    "state_id": 38,
+    "name": "Diu"
+  }
+]

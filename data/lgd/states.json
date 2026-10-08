@@ -1,0 +1,254 @@
+[
+  {
+    "id": 35,
+    "code": "35",
+    "name": "Andaman And Nicobar Islands",
+    "local_name": "ANDAMAN AND NICOBAR ISLANDS",
+    "type": "UNION_TERRITORY"
+  },
+  {
+    "id": 28,
+    "code": "28",
+    "name": "Andhra Pradesh",
+    "local_name": "ANDHRA PRADESH",
+    "type": "STATE"
+  },
+  {
+    "id": 12,
+    "code": "12",
+    "name": "Arunachal Pradesh",
+    "local_name": "ARUNACHAL PRADESH",
+    "type": "STATE"
+  },
+  {
+    "id": 18,
+    "code": "18",
+    "name": "Assam",
+    "local_name": "ASSAM",
+    "type": "STATE"
+  },
+  {
+    "id": 10,
+    "code": "10",
+    "name": "Bihar",
+    "local_name": "BIHAR",
+    "type": "STATE"
+  },
+  {
+    "id": 4,
+    "code": "4",
+    "name": "Chandigarh",
+    "local_name": "CHANDIGARH",
+    "type": "UNION_TERRITORY"
+  },
+  {
+    "id": 22,
+    "code": "22",
+    "name": "Chhattisgarh",
+    "local_name": "छत्तीसगढ़",
+    "type": "STATE"
+  },
+  {
+    "id": 7,
+    "code": "7",
+    "name": "Delhi",
+    "local_name": "DELHI",
+    "type": "UNION_TERRITORY"
+  },
+  {
+    "id": 30,
+    "code": "30",
+    "name": "Goa",
+    "local_name": "GOA",
+    "type": "STATE"
+  },
+  {
+    "id": 24,
+    "code": "24",
+    "name": "Gujarat",
+    "local_name": "GUJARAT",
+    "type": "STATE"
+  },
+  {
+    "id": 6,
+    "code": "6",
+    "name": "Haryana",
+    "local_name": "HARYANA",
+    "type": "STATE"
+  },
+  {
+    "id": 2,
+    "code": "2",
+    "name": "Himachal Pradesh",
+    "local_name": "HIMACHAL PRADESH",
+    "type": "STATE"
+  },
+  {
+    "id": 1,
+    "code": "1",
+    "name": "Jammu And Kashmir",
+    "local_name": "JAMMU AND KASHMIR",
+    "type": "UNION_TERRITORY"
+  },
+  {
+    "id": 20,
+    "code": "20",
+    "name": "Jharkhand",
+    "local_name": "झारखंड",
+    "type": "STATE"
+  },
+  {
+    "id": 29,
+    "code": "29",
+    "name": "Karnataka",
+    "local_name": "ಕರ್ನಾಟಕ",
+    "type": "STATE"
+  },
+  {
+    "id": 32,
+    "code": "32",
+    "name": "Kerala",
+    "local_name": "KERALA",
+    "type": "STATE"
+  },
+  {
+    "id": 37,
+    "code": "37",
+    "name": "Ladakh",
+    "local_name": "Ladakh",
+    "type": "UNION_TERRITORY"
+  },
+  {
+    "id": 31,
+    "code": "31",
+    "name": "Lakshadweep",
+    "local_name": "LAKSHADWEEP",
+    "type": "UNION_TERRITORY"
+  },
+  {
+    "id": 23,
+    "code": "23",
+    "name": "Madhya Pradesh",
+    "local_name": "MADHYA PRADESH",
+    "type": "STATE"
+  },
+  {
+    "id": 27,
+    "code": "27",
+    "name": "Maharashtra",
+    "local_name": "महाराष्ट्र",
+    "type": "STATE"
+  },
+  {
+    "id": 14,
+    "code": "14",
+    "name": "Manipur",
+    "local_name": "MANIPUR",
+    "type": "STATE"
+  },
+  {
+    "id": 17,
+    "code": "17",
+    "name": "Meghalaya",
+    "local_name": "MEGHALAYA",
+    "type": "STATE"
+  },
+  {
+    "id": 15,
+    "code": "15",
+    "name": "Mizoram",
+    "local_name": "MIZORAM",
+    "type": "STATE"
+  },
+  {
+    "id": 13,
+    "code": "13",
+    "name": "Nagaland",
+    "local_name": "NAGALAND",
+    "type": "STATE"
+  },
+  {
+    "id": 21,
+    "code": "21",
+    "name": "Odisha",
+    "local_name": "ଓଡ଼ିଶା",
+    "type": "STATE"
+  },
+  {
+    "id": 34,
+    "code": "34",
+    "name": "Puducherry",
+    "local_name": "PUDUCHERRY",
+    "type": "UNION_TERRITORY"
+  },
+  {
+    "id": 3,
+    "code": "3",
+    "name": "Punjab",
+    "local_name": "PUNJAB",
+    "type": "STATE"
+  },
+  {
+    "id": 8,
+    "code": "8",
+    "name": "Rajasthan",
+    "local_name": "RAJASTHAN",
+    "type": "STATE"
+  },
+  {
+    "id": 11,
+    "code": "11",
+    "name": "Sikkim",
+    "local_name": "SIKKIM",
+    "type": "STATE"
+  },
+  {
+    "id": 33,
+    "code": "33",
+    "name": "Tamil Nadu",
+    "local_name": "TAMIL NADU",
+    "type": "STATE"
+  },
+  {
+    "id": 36,
+    "code": "36",
+    "name": "Telangana",
+    "local_name": "తెలంగాణ",
+    "type": "STATE"
+  },
+  {
+    "id": 38,
+    "code": "38",
+    "name": "The Dadra And Nagar Haveli And Daman And Diu",
+    "local_name": "THE DADRA AND NAGAR HAVELI AND DAMAN AND DIU",
+    "type": "UNION_TERRITORY"
+  },
+  {
+    "id": 16,
+    "code": "16",
+    "name": "Tripura",
+    "local_name": "ত্রিপুরা",
+    "type": "STATE"
+  },
+  {
+    "id": 9,
+    "code": "9",
+    "name": "Uttar Pradesh",
+    "local_name": "UTTAR PRADESH",
+    "type": "STATE"
+  },
+  {
+    "id": 5,
+    "code": "5",
+    "name": "Uttarakhand",
+    "local_name": "UTTARAKHAND",
+    "type": "STATE"
+  },
+  {
+    "id": 19,
+    "code": "19",
+    "name": "West Bengal",
+    "local_name": "WEST BENGAL",
+    "type": "STATE"
+  }
+]

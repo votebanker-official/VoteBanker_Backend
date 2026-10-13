@@ -8,6 +8,7 @@ const rateLimit = require("express-rate-limit");
 const authRoutes = require("./routes/auth");
 const locationRoutes = require("./routes/locations");
 const profileRoutes = require("./routes/profile");
+const websiteRoutes = require("./routes/websites");
 
 const { loadEnv } = require("./env");
 const { createMerchandiseRouter } = require("./merchandise");
@@ -23,7 +24,8 @@ const port = process.env.PORT || 5000;
 app.set("trust proxy", 1);
 
 app.use(helmet());
-app.use(express.json({ limit: "100kb" }));
+// Website drafts can include structured content; media base64 stays off the wire.
+app.use(express.json({ limit: "1mb" }));
 
 const allowedOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
@@ -53,6 +55,8 @@ app.get("/", (_req, res) => {
       "POST /api/auth/otp/send",
       "POST /api/auth/otp/verify",
       "GET|PUT /api/profile",
+      "GET|PUT /api/websites/me",
+      "POST /api/websites/me/publish",
       "GET /api/location/countries",
       "GET /api/location/states",
       "GET /api/location/districts",
@@ -74,6 +78,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/websites", websiteRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/merchandise", createMerchandiseRouter());
 app.use("/api/speeches", createSpeechesRouter());

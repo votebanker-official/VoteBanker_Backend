@@ -43,13 +43,21 @@ You need to be invited to the Railway project first. Ask the project owner. Neve
 | POST | `/api/auth/otp/send` | `{ "phone": "+91...", "channel": "sms" }` |
 | POST | `/api/auth/otp/verify` | `{ "phone": "+91...", "code": "123456" }` returns `access_token`, `refresh_token` |
 | GET / PUT | `/api/profile` | `Authorization: Bearer <access_token>`. PUT saves onboarding answers |
+| GET / PUT | `/api/websites/me` | Authenticated website builder draft (template, profile, content, design). PUT upserts the signed-in user's draft |
+| POST | `/api/websites/me/publish` | Publish only when `payment_verified` is true on the server. Returns `402 payment_required` otherwise |
 | POST | `/api/letters/generate` | Official letter from the form. Uses the speech model settings, or a formal letter composed from those details when no key is set. |
 
 How sign in works: Twilio Verify checks the code, then the backend creates or signs in a Supabase user (phone-derived email + server-computed password) and returns a normal Supabase session.
 
 ## Database
 
-SQL migrations are in `supabase/migrations/` (already applied to the live project). Table: `public.profiles` (row-level security: users only see their own row). Users appear under Supabase -> Authentication -> Users.
+SQL migrations are in `supabase/migrations/` (already applied to the live project). Tables: `public.profiles` and `public.websites` (row-level security: users only see their own rows). Users appear under Supabase -> Authentication -> Users.
+
+Apply new website migration in Supabase SQL editor or CLI:
+
+`supabase/migrations/20261013120000_create_websites.sql`
+
+Payment verification for website publishing is not wired to a gateway yet. Until a provider confirms payment and sets `websites.payment_verified = true` on the server, `POST /api/websites/me/publish` returns `402 payment_required`.
 
 ## Known limits / next steps
 

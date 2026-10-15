@@ -14,6 +14,7 @@ const { loadEnv } = require("./env");
 const { createMerchandiseRouter } = require("./merchandise");
 const { createSpeechesRouter } = require("./speeches");
 const { createLettersRouter } = require("./letters");
+const { createDomainsRouter } = require("./domains");
 
 loadEnv();
 
@@ -65,6 +66,7 @@ app.get("/", (_req, res) => {
       "GET|POST /api/merchandise/orders",
       "POST /api/speeches/generate",
       "POST /api/letters/generate",
+      "POST /api/domains/search",
     ],
   });
 });
@@ -83,6 +85,7 @@ app.use("/api/location", locationRoutes);
 app.use("/api/merchandise", createMerchandiseRouter());
 app.use("/api/speeches", createSpeechesRouter());
 app.use("/api/letters", createLettersRouter());
+app.use("/api/domains", createDomainsRouter());
 
 app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });

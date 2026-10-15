@@ -46,6 +46,7 @@ You need to be invited to the Railway project first. Ask the project owner. Neve
 | GET / PUT | `/api/websites/me` | Authenticated website builder draft (template, profile, content, design). PUT upserts the signed-in user's draft |
 | POST | `/api/websites/me/publish` | Publish only when `payment_verified` is true on the server. Returns `402 payment_required` otherwise |
 | POST | `/api/letters/generate` | Official letter from the form. Uses the speech model settings, or a formal letter composed from those details when no key is set. |
+| POST | `/api/domains/search` | `{ "name": "votebanker", "extensions": ["com","in"] }` — live Openprovider availability + reseller registration price. Credentials: `OPENPROVIDER_USERNAME`, `OPENPROVIDER_PASSWORD` (see `.env.example`). |
 
 How sign in works: Twilio Verify checks the code, then the backend creates or signs in a Supabase user (phone-derived email + server-computed password) and returns a normal Supabase session.
 

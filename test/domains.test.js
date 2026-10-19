@@ -37,7 +37,7 @@ test("pasted full domains keep only the label", () => {
   assert.equal(normalizeName("https://www.VoteBanker.com/path"), "votebanker");
   const parsed = validateDomainSearch({ name: "votebanker.co.in" });
   assert.equal(parsed.value.name, "votebanker");
-  assert.deepEqual(parsed.value.extensions, ["com", "org", "net", "in", "io", "ai", "co"]);
+  assert.deepEqual(parsed.value.extensions, ["com", "in", "org", "co", "ai", "io", "net"]);
 });
 
 test("invalid input is rejected", () => {
@@ -59,7 +59,7 @@ test("invalid input is rejected", () => {
 test("multiple extensions are accepted within the limit", () => {
   const parsed = validateDomainSearch({
     name: "votebanker",
-    extensions: ["com", "org", "net", "in", "io", "ai", "co"],
+    extensions: ["com", "in", "org", "co", "ai", "io", "net"],
   });
   assert.equal(parsed.error, undefined);
   assert.equal(parsed.value.extensions.length, 7);
@@ -73,7 +73,7 @@ test("price mapping prefers reseller currency and amount", () => {
         reseller: { currency: "EUR", price: 7.53 },
       },
     }),
-    { amount: 7.53, currency: "EUR" }
+    { amount: 7.53, currency: "EUR", source: "reseller" }
   );
   assert.equal(extractPrice({}), null);
   assert.equal(extractPrice({ price: { reseller: { currency: "EUR" } } }), null);
@@ -86,12 +86,26 @@ test("status mapping never marks unknown results as available", () => {
       domain: "a.com",
       available: true,
       status: "free",
-      price: { amount: 12.5, currency: "USD" },
+      price: { amount: 12.5, currency: "USD", source: "reseller" },
+      supplierPrice: null,
       isPremium: false,
     }
   );
   assert.equal(mapDomainResult({ domain: "a.com", status: "in use" }).available, false);
+  assert.equal(mapDomainResult({ domain: "a.com", status: "active" }).available, false);
+  assert.equal(mapDomainResult({ domain: "a.com", status: "active" }).status, "in use");
   assert.equal(mapDomainResult({ domain: "a.com", status: "reserved" }).available, false);
+  assert.deepEqual(
+    mapDomainResult({
+      domain: "a.com",
+      status: "active",
+      price: {
+        product: { currency: "USD", price: 10.46 },
+        reseller: { currency: "INR", price: 1043 },
+      },
+    }).price,
+    { amount: 1043, currency: "INR", source: "reseller" }
+  );
   const unknown = mapDomainResult({ domain: "a.com", status: "weird" });
   assert.equal(unknown.available, false);
   assert.equal(unknown.error, "unknown_status");
@@ -222,10 +236,13 @@ test("reserved domains and missing pricing are represented correctly", async () 
     { name: "votebanker", extensions: ["org", "net"] },
     { env, fetchImpl }
   );
-  assert.equal(result.body.results[0].available, false);
-  assert.equal(result.body.results[0].status, "reserved");
+  // Available results are sorted above unavailable ones.
+  assert.equal(result.body.results[0].domain, "votebanker.net");
+  assert.equal(result.body.results[0].available, true);
   assert.equal(result.body.results[0].price, null);
-  assert.equal(result.body.results[1].available, true);
+  assert.equal(result.body.results[1].domain, "votebanker.org");
+  assert.equal(result.body.results[1].available, false);
+  assert.equal(result.body.results[1].status, "reserved");
   assert.equal(result.body.results[1].price, null);
 });
 
@@ -256,7 +273,11 @@ test("premium domains keep the premium flag and reseller price", async () => {
     { env, fetchImpl }
   );
   assert.equal(result.body.results[0].isPremium, true);
-  assert.deepEqual(result.body.results[0].price, { amount: 219.8, currency: "EUR" });
+  assert.deepEqual(result.body.results[0].price, {
+    amount: 219.8,
+    currency: "EUR",
+    source: "reseller",
+  });
 });
 
 test("upstream timeout and malformed responses fail safely", async () => {

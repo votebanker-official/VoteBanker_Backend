@@ -3,7 +3,8 @@ const rateLimit = require("express-rate-limit");
 
 const { createOpenproviderClient, detectEgressIp } = require("./openprovider");
 
-const DEFAULT_EXTENSIONS = ["com", "org", "net", "in", "io", "ai", "co"];
+// Standard TLDs first, in the product display order.
+const DEFAULT_EXTENSIONS = ["com", "in", "org", "co", "ai", "io", "net"];
 const ALLOWED_EXTENSIONS = new Set([
   "com",
   "in",
@@ -19,6 +20,15 @@ const ALLOWED_EXTENSIONS = new Set([
   "site",
   "store",
   "xyz",
+]);
+
+const UNAVAILABLE_STATUSES = new Set([
+  "active",
+  "in use",
+  "reserved",
+  "unavailable",
+  "taken",
+  "registered",
 ]);
 
 const MAX_NAME_LENGTH = 63;
@@ -120,25 +130,41 @@ function extractPrice(entry) {
     return null;
   }
 
+  // Openprovider account/reseller registration price (account currency).
   const reseller = entry.price && entry.price.reseller;
+  // Supplier/product price (often USD in RCP).
   const product = entry.price && entry.price.product;
-  const source = reseller && reseller.currency != null && reseller.price != null
-    ? reseller
-    : product && product.currency != null && product.price != null
-      ? product
+  // Premium create price when present.
+  const premiumCreate =
+    entry.premium && entry.premium.price && entry.premium.price.create != null
+      ? entry.premium.price.create
       : null;
 
-  if (!source) {
-    return null;
+  if (reseller && reseller.currency != null && reseller.price != null) {
+    const amount = Number(reseller.price);
+    const currency = String(reseller.currency || "").trim().toUpperCase();
+    if (Number.isFinite(amount) && currency) {
+      return { amount, currency, source: "reseller" };
+    }
   }
 
-  const amount = Number(source.price);
-  const currency = String(source.currency || "").trim().toUpperCase();
-  if (!Number.isFinite(amount) || !currency) {
-    return null;
+  if (entry.is_premium && premiumCreate != null && product && product.currency) {
+    const amount = Number(premiumCreate);
+    const currency = String(product.currency || "").trim().toUpperCase();
+    if (Number.isFinite(amount) && currency) {
+      return { amount, currency, source: "premium_create" };
+    }
   }
 
-  return { amount, currency };
+  if (product && product.currency != null && product.price != null) {
+    const amount = Number(product.price);
+    const currency = String(product.currency || "").trim().toUpperCase();
+    if (Number.isFinite(amount) && currency) {
+      return { amount, currency, source: "product" };
+    }
+  }
+
+  return null;
 }
 
 function mapDomainResult(entry, requested) {
@@ -161,6 +187,13 @@ function mapDomainResult(entry, requested) {
   const rawStatus = String(entry.status || "").trim().toLowerCase();
   const isPremium = Boolean(entry.is_premium);
   const price = extractPrice(entry);
+  const supplier =
+    entry.price && entry.price.product && entry.price.product.price != null
+      ? {
+          amount: Number(entry.price.product.price),
+          currency: String(entry.price.product.currency || "").trim().toUpperCase() || null,
+        }
+      : null;
 
   if (rawStatus === "free") {
     return {
@@ -168,16 +201,25 @@ function mapDomainResult(entry, requested) {
       available: true,
       status: "free",
       price,
+      supplierPrice:
+        supplier && Number.isFinite(supplier.amount) && supplier.currency
+          ? supplier
+          : null,
       isPremium,
     };
   }
 
-  if (rawStatus === "reserved" || rawStatus === "in use") {
+  if (UNAVAILABLE_STATUSES.has(rawStatus)) {
     return {
       domain,
       available: false,
-      status: rawStatus,
+      // Normalize Openprovider "active" (registered) to a clear unavailable status.
+      status: rawStatus === "active" ? "in use" : rawStatus,
       price,
+      supplierPrice:
+        supplier && Number.isFinite(supplier.amount) && supplier.currency
+          ? supplier
+          : null,
       isPremium,
     };
   }
@@ -187,9 +229,42 @@ function mapDomainResult(entry, requested) {
     available: false,
     status: rawStatus || "unknown",
     price,
+    supplierPrice:
+      supplier && Number.isFinite(supplier.amount) && supplier.currency
+        ? supplier
+        : null,
     isPremium,
     error: "unknown_status",
   };
+}
+
+function extensionRank(domain) {
+  const parts = String(domain || "").toLowerCase().split(".");
+  if (parts.length < 2) {
+    return DEFAULT_EXTENSIONS.length + 10;
+  }
+  const extension = parts.slice(1).join(".");
+  const index = DEFAULT_EXTENSIONS.indexOf(extension);
+  return index === -1 ? DEFAULT_EXTENSIONS.length + 5 : index;
+}
+
+function sortDomainResults(results) {
+  return [...results].sort((a, b) => {
+    // Available (including premium free) first, then unavailable.
+    if (Boolean(a.available) !== Boolean(b.available)) {
+      return a.available ? -1 : 1;
+    }
+    // Premium available still stays with available group; prefer non-premium only as tie-break after TLD order? 
+    // Keep standard TLD order within each availability group.
+    const rankDiff = extensionRank(a.domain) - extensionRank(b.domain);
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+    if (Boolean(a.isPremium) !== Boolean(b.isPremium)) {
+      return a.isPremium ? 1 : -1;
+    }
+    return String(a.domain || "").localeCompare(String(b.domain || ""));
+  });
 }
 
 function chunk(items, size) {
@@ -232,21 +307,24 @@ async function searchDomains(body, options = {}) {
       }
     }
 
-    const results = requests.map((requested) => {
-      const key = `${requested.name}.${requested.extension}`.toLowerCase();
-      const entry = byDomain.get(key);
-      if (!entry) {
-        return {
-          domain: key,
-          available: false,
-          status: "unknown",
-          price: null,
-          isPremium: false,
-          error: "missing_result",
-        };
-      }
-      return mapDomainResult(entry, requested);
-    });
+    const results = sortDomainResults(
+      requests.map((requested) => {
+        const key = `${requested.name}.${requested.extension}`.toLowerCase();
+        const entry = byDomain.get(key);
+        if (!entry) {
+          return {
+            domain: key,
+            available: false,
+            status: "unknown",
+            price: null,
+            supplierPrice: null,
+            isPremium: false,
+            error: "missing_result",
+          };
+        }
+        return mapDomainResult(entry, requested);
+      })
+    );
 
     return { status: 200, body: { success: true, results } };
   } catch (error) {
@@ -346,5 +424,6 @@ module.exports = {
   normalizeExtension,
   normalizeName,
   searchDomains,
+  sortDomainResults,
   validateDomainSearch,
 };

@@ -33,14 +33,37 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "")
   .map((o) => o.trim())
   .filter(Boolean);
 
+function isLocalDevOrigin(origin) {
+  return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(String(origin || ""));
+}
+
+function isAllowedOrigin(origin) {
+  // Non-browser clients (no Origin header).
+  if (!origin) {
+    return true;
+  }
+  // Empty CORS_ORIGINS = allow all (local default).
+  if (allowedOrigins.length === 0) {
+    return true;
+  }
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+  // Flutter web / Chrome local debugging against Railway.
+  if (isLocalDevOrigin(origin)) {
+    return true;
+  }
+  return false;
+}
+
 app.use(
   cors({
     origin: (origin, cb) => {
-      // Allow non-browser clients (no Origin header) and listed origins.
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      // Never throw here: thrown errors skip CORS headers and break browser preflight.
+      if (isAllowedOrigin(origin)) {
         return cb(null, true);
       }
-      return cb(new Error("Origin not allowed"));
+      return cb(null, false);
     },
   })
 );
@@ -95,9 +118,6 @@ app.use((_req, res) => {
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
   console.error(err.message);
-  if (err.message === "Origin not allowed") {
-    return res.status(403).json({ error: "origin_not_allowed" });
-  }
   res.status(500).json({ error: "server_error" });
 });
 

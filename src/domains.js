@@ -308,7 +308,7 @@ function chunk(items, size) {
   return batches;
 }
 
-async function mapPool(items, concurrency, worker) {
+async function mapPool(items, concurrency, worker, { continueOnError = false } = {}) {
   const results = new Array(items.length);
   let next = 0;
 
@@ -316,11 +316,23 @@ async function mapPool(items, concurrency, worker) {
     while (next < items.length) {
       const index = next;
       next += 1;
-      results[index] = await worker(items[index], index);
+      try {
+        results[index] = await worker(items[index], index);
+      } catch (error) {
+        if (!continueOnError) {
+          throw error;
+        }
+        console.error(
+          `domain check batch failed: ${error && error.code ? error.code : error}`
+        );
+        results[index] = [];
+      }
     }
   }
 
-  const runners = Array.from({ length: Math.min(concurrency, items.length) }, () => run());
+  const runners = Array.from({ length: Math.min(concurrency, Math.max(items.length, 1)) }, () =>
+    run()
+  );
   await Promise.all(runners);
   return results;
 }
@@ -364,13 +376,17 @@ async function resolveExtensions(parsed, client, env) {
   return merged;
 }
 
-async function checkAllDomains(client, requests, env) {
+async function checkAllDomains(client, requests, env, { resilient = false } = {}) {
   const batches = chunk(requests, batchSize(env));
   const concurrency = checkConcurrency(env);
+  const poolOpts = { continueOnError: resilient };
 
   // Phase 1: availability only (faster / lighter than priced checks).
-  const availabilityBatches = await mapPool(batches, concurrency, (batch) =>
-    client.checkDomains(batch, { withPrice: false })
+  const availabilityBatches = await mapPool(
+    batches,
+    concurrency,
+    (batch) => client.checkDomains(batch, { withPrice: false }),
+    poolOpts
   );
   const availability = availabilityBatches.flat();
 
@@ -393,8 +409,11 @@ async function checkAllDomains(client, requests, env) {
   }
 
   // Phase 2: priced checks only for free domains.
-  const pricedBatches = await mapPool(chunk(freeRequests, batchSize(env)), concurrency, (batch) =>
-    client.checkDomains(batch, { withPrice: true })
+  const pricedBatches = await mapPool(
+    chunk(freeRequests, batchSize(env)),
+    concurrency,
+    (batch) => client.checkDomains(batch, { withPrice: true }),
+    poolOpts
   );
   return pricedBatches.flat();
 }
@@ -419,7 +438,10 @@ async function searchDomains(body, options = {}) {
       extension,
     }));
 
-    const upstream = await checkAllDomains(client, requests, env);
+    // Full-catalog searches skip failed batches instead of failing the whole request.
+    const upstream = await checkAllDomains(client, requests, env, {
+      resilient: Boolean(parsed.value.useCatalog),
+    });
     const results = sortDomainResults(
       upstream
         .map((entry) => mapDomainResult(entry))

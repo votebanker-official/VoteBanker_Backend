@@ -341,6 +341,9 @@ async function searchDomains(body, options = {}) {
       if (egressIp) {
         body.serverIp = egressIp;
       }
+      // Railway egress IPs rotate. Whitelisting one IP is not a stable fix.
+      body.hint =
+        "Clear Openprovider API whitelist AND blacklist completely (leave both empty). Do not paste a single Railway IP.";
     }
     return { status, body };
   }

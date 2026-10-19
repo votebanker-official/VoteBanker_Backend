@@ -10,6 +10,7 @@ const {
   searchDomains,
   createDomainsRouter,
   normalizeName,
+  STANDARD_EXTENSIONS,
 } = require("../src/domains");
 const {
   createOpenproviderClient,
@@ -30,17 +31,32 @@ test("valid domain-name input is normalized", () => {
   });
   assert.equal(parsed.error, undefined);
   assert.equal(parsed.value.name, "vote-banker");
+  assert.equal(parsed.value.useCatalog, false);
   assert.deepEqual(parsed.value.extensions, ["com", "in", "org"]);
+});
+
+test("omitted extensions request the full Openprovider catalog", () => {
+  const parsed = validateDomainSearch({ name: "votebanker" });
+  assert.equal(parsed.error, undefined);
+  assert.equal(parsed.value.name, "votebanker");
+  assert.equal(parsed.value.useCatalog, true);
+  assert.equal(parsed.value.extensions, null);
+});
+
+test("allTlds flag requests the full catalog", () => {
+  const parsed = validateDomainSearch({
+    name: "votebanker",
+    allTlds: true,
+    extensions: ["com"],
+  });
+  assert.equal(parsed.value.useCatalog, true);
 });
 
 test("pasted full domains keep only the label", () => {
   assert.equal(normalizeName("https://www.VoteBanker.com/path"), "votebanker");
   const parsed = validateDomainSearch({ name: "votebanker.co.in" });
   assert.equal(parsed.value.name, "votebanker");
-  assert.equal(parsed.value.extensions[0], "com");
-  assert.equal(parsed.value.extensions[1], "in");
-  assert.ok(parsed.value.extensions.includes("ai"));
-  assert.ok(parsed.value.extensions.includes("online"));
+  assert.equal(parsed.value.useCatalog, true);
 });
 
 test("invalid input is rejected", () => {
@@ -49,7 +65,8 @@ test("invalid input is rejected", () => {
   assert.equal(validateDomainSearch({ name: "-bad" }).error, "invalid_name");
   assert.equal(validateDomainSearch({ name: "bad-" }).error, "invalid_name");
   assert.equal(validateDomainSearch({ name: "has space" }).error, "invalid_name");
-  assert.equal(validateDomainSearch({ name: "ok", extensions: ["evil"] }).error, "invalid_extensions");
+  assert.equal(validateDomainSearch({ name: "ok", extensions: ["bad_ext"] }).error, "invalid_extensions");
+  assert.equal(validateDomainSearch({ name: "ok", extensions: [] }).error, "invalid_extensions");
   assert.equal(
     validateDomainSearch(
       { name: "ok", extensions: ["com", "in", "org", "net", "co.in", "io"] },
@@ -139,6 +156,29 @@ function jsonResponse(status, body) {
   };
 }
 
+function loginOk() {
+  return async () => jsonResponse(200, { code: 0, data: { token: "token" } });
+}
+
+/** Two-phase check: availability (with_price=false), then priced check for free domains. */
+function twoPhaseChecks(availabilityResults, pricedResults) {
+  return [
+    async (_url, options) => {
+      const body = JSON.parse(options.body);
+      assert.equal(body.with_price, false);
+      return jsonResponse(200, { code: 0, data: { results: availabilityResults } });
+    },
+    async (_url, options) => {
+      const body = JSON.parse(options.body);
+      assert.equal(body.with_price, true);
+      return jsonResponse(200, {
+        code: 0,
+        data: { results: pricedResults !== undefined ? pricedResults : availabilityResults.filter((r) => r.status === "free") },
+      });
+    },
+  ];
+}
+
 test("Openprovider authentication failure surfaces safely", async () => {
   const fetchImpl = mockFetchSequence([
     async () => jsonResponse(401, { code: 1, desc: "denied", data: {} }),
@@ -163,10 +203,29 @@ test("expired token is refreshed and the check is retried", async () => {
     async () => jsonResponse(200, { code: 0, data: { token: "token-2" } }),
     async (_url, options) => {
       assert.match(options.headers.Authorization, /^Bearer token-2$/);
+      const body = JSON.parse(options.body);
+      assert.equal(body.with_price, false);
       return jsonResponse(200, {
         code: 0,
         data: {
-          results: [{ domain: "votebanker.com", status: "free", price: { reseller: { currency: "USD", price: 12.5 } } }],
+          results: [{ domain: "votebanker.com", status: "free" }],
+        },
+      });
+    },
+    async (_url, options) => {
+      assert.match(options.headers.Authorization, /^Bearer token-2$/);
+      const body = JSON.parse(options.body);
+      assert.equal(body.with_price, true);
+      return jsonResponse(200, {
+        code: 0,
+        data: {
+          results: [
+            {
+              domain: "votebanker.com",
+              status: "free",
+              price: { reseller: { currency: "USD", price: 12.5 } },
+            },
+          ],
         },
       });
     },
@@ -182,30 +241,25 @@ test("expired token is refreshed and the check is retried", async () => {
   assert.equal(result.body.results[0].price.amount, 12.5);
 });
 
-test("successful availability results include free and unavailable domains", async () => {
+test("successful availability results include only free domains with prices", async () => {
   const fetchImpl = mockFetchSequence([
-    async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
-    async (_url, options) => {
-      const body = JSON.parse(options.body);
-      assert.equal(body.with_price, true);
-      assert.deepEqual(body.domains, [
-        { name: "votebanker", extension: "com" },
-        { name: "votebanker", extension: "in" },
-      ]);
-      return jsonResponse(200, {
-        code: 0,
-        data: {
-          results: [
-            {
-              domain: "votebanker.com",
-              status: "free",
-              price: { reseller: { currency: "USD", price: 12.5 } },
-            },
-            { domain: "votebanker.in", status: "in use" },
-          ],
+    loginOk(),
+    ...twoPhaseChecks(
+      [
+        {
+          domain: "votebanker.com",
+          status: "free",
         },
-      });
-    },
+        { domain: "votebanker.in", status: "in use" },
+      ],
+      [
+        {
+          domain: "votebanker.com",
+          status: "free",
+          price: { reseller: { currency: "USD", price: 12.5 } },
+        },
+      ]
+    ),
   ]);
 
   const result = await searchDomains(
@@ -214,26 +268,24 @@ test("successful availability results include free and unavailable domains", asy
   );
   assert.equal(result.status, 200);
   assert.equal(result.body.success, true);
-  // Only available domains are returned.
+  assert.equal(result.body.checked, 2);
   assert.equal(result.body.results.length, 1);
   assert.equal(result.body.results[0].domain, "votebanker.com");
   assert.equal(result.body.results[0].available, true);
   assert.equal(result.body.results[0].status, "free");
+  assert.equal(result.body.results[0].price.amount, 12.5);
 });
 
 test("reserved domains are omitted and available domains keep pricing null when missing", async () => {
   const fetchImpl = mockFetchSequence([
-    async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
-    async () =>
-      jsonResponse(200, {
-        code: 0,
-        data: {
-          results: [
-            { domain: "votebanker.org", status: "reserved" },
-            { domain: "votebanker.net", status: "free" },
-          ],
-        },
-      }),
+    loginOk(),
+    ...twoPhaseChecks(
+      [
+        { domain: "votebanker.org", status: "reserved" },
+        { domain: "votebanker.net", status: "free" },
+      ],
+      [{ domain: "votebanker.net", status: "free" }]
+    ),
   ]);
 
   const result = await searchDomains(
@@ -248,19 +300,20 @@ test("reserved domains are omitted and available domains keep pricing null when 
 
 test("standard available TLDs are ordered before other available TLDs", async () => {
   const fetchImpl = mockFetchSequence([
-    async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
-    async () =>
-      jsonResponse(200, {
-        code: 0,
-        data: {
-          results: [
-            { domain: "vote.online", status: "free", price: { reseller: { currency: "INR", price: 100 } } },
-            { domain: "vote.ai", status: "free", price: { reseller: { currency: "INR", price: 200 } } },
-            { domain: "vote.com", status: "free", price: { reseller: { currency: "INR", price: 300 } } },
-            { domain: "vote.in", status: "active" },
-          ],
-        },
-      }),
+    loginOk(),
+    ...twoPhaseChecks(
+      [
+        { domain: "vote.online", status: "free" },
+        { domain: "vote.ai", status: "free" },
+        { domain: "vote.com", status: "free" },
+        { domain: "vote.in", status: "active" },
+      ],
+      [
+        { domain: "vote.online", status: "free", price: { reseller: { currency: "INR", price: 100 } } },
+        { domain: "vote.ai", status: "free", price: { reseller: { currency: "INR", price: 200 } } },
+        { domain: "vote.com", status: "free", price: { reseller: { currency: "INR", price: 300 } } },
+      ]
+    ),
   ]);
 
   const result = await searchDomains(
@@ -273,26 +326,64 @@ test("standard available TLDs are ordered before other available TLDs", async ()
   );
 });
 
+test("full catalog search checks standard TLDs first then remaining Openprovider TLDs", async () => {
+  const catalog = ["aaa", "com", "online", "xyz"];
+  const client = createOpenproviderClient({ env, fetchImpl: async () => {
+    throw new Error("unused");
+  } });
+  client._setTldCacheForTests(catalog);
+
+  const checkedExtensions = [];
+  client.checkDomains = async (domains, { withPrice } = {}) => {
+    for (const item of domains) {
+      if (!withPrice) {
+        checkedExtensions.push(item.extension);
+      }
+    }
+    return domains.map((item) => ({
+      domain: `${item.name}.${item.extension}`,
+      status: item.extension === "aaa" ? "active" : "free",
+      ...(withPrice
+        ? { price: { reseller: { currency: "INR", price: 10 } } }
+        : {}),
+    }));
+  };
+
+  const result = await searchDomains({ name: "vote", allTlds: true }, { env, client });
+  assert.equal(result.status, 200);
+  assert.deepEqual(checkedExtensions.slice(0, STANDARD_EXTENSIONS.length), STANDARD_EXTENSIONS);
+  assert.ok(checkedExtensions.includes("online"));
+  assert.ok(checkedExtensions.includes("xyz"));
+  assert.ok(checkedExtensions.includes("aaa"));
+  assert.deepEqual(
+    result.body.results.map((item) => item.domain),
+    ["vote.com", "vote.in", "vote.org", "vote.co", "vote.ai", "vote.io", "vote.net", "vote.online", "vote.xyz"]
+  );
+});
+
 test("premium domains keep the premium flag and reseller price", async () => {
   const fetchImpl = mockFetchSequence([
-    async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
-    async () =>
-      jsonResponse(200, {
-        code: 0,
-        data: {
-          results: [
-            {
-              domain: "vote.ai",
-              status: "free",
-              is_premium: true,
-              price: {
-                product: { currency: "USD", price: 250 },
-                reseller: { currency: "EUR", price: 219.8 },
-              },
-            },
-          ],
+    loginOk(),
+    ...twoPhaseChecks(
+      [
+        {
+          domain: "vote.ai",
+          status: "free",
+          is_premium: true,
         },
-      }),
+      ],
+      [
+        {
+          domain: "vote.ai",
+          status: "free",
+          is_premium: true,
+          price: {
+            product: { currency: "USD", price: 250 },
+            reseller: { currency: "EUR", price: 219.8 },
+          },
+        },
+      ]
+    ),
   ]);
 
   const result = await searchDomains(
@@ -325,7 +416,7 @@ test("upstream timeout and malformed responses fail safely", async () => {
     {
       env,
       fetchImpl: mockFetchSequence([
-        async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
+        loginOk(),
         async () => jsonResponse(200, { code: 0, data: { results: "nope" } }),
       ]),
     }
@@ -336,7 +427,7 @@ test("upstream timeout and malformed responses fail safely", async () => {
 
 test("Openprovider IP access denial is mapped clearly", async () => {
   const fetchImpl = mockFetchSequence([
-    async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
+    loginOk(),
     async () => jsonResponse(500, { code: 10005, desc: "Access denied." }),
     async (url) => {
       assert.match(String(url), /ipify/);
@@ -380,14 +471,17 @@ test("POST /api/domains/search and health continue to respond", async () => {
     createDomainsRouter({
       env,
       fetchImpl: mockFetchSequence([
-        async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
-        async () =>
-          jsonResponse(200, {
-            code: 0,
-            data: {
-              results: [{ domain: "votebanker.com", status: "free", price: { reseller: { currency: "USD", price: 9 } } }],
+        loginOk(),
+        ...twoPhaseChecks(
+          [{ domain: "votebanker.com", status: "free" }],
+          [
+            {
+              domain: "votebanker.com",
+              status: "free",
+              price: { reseller: { currency: "USD", price: 9 } },
             },
-          }),
+          ]
+        ),
       ]),
       rateLimitPerMinute: 1000,
     })

@@ -5,7 +5,9 @@
 
 const DEFAULT_BASE_URL = "https://api.openprovider.eu/v1";
 const DEFAULT_TOKEN_TTL_MS = 55 * 60 * 1000;
-const DEFAULT_TIMEOUT_MS = 15_000;
+// Per-request timeout. Full-catalog searches issue many parallel checks.
+const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_TLD_CACHE_MS = 12 * 60 * 60 * 1000;
 
 function readConfig(env = process.env) {
   const username = String(env.OPENPROVIDER_USERNAME || "")
@@ -211,12 +213,12 @@ function createOpenproviderClient(options = {}) {
     return { response, payload };
   }
 
-  async function checkDomains(domains) {
+  async function checkDomains(domains, { withPrice = true } = {}) {
     const { response, payload } = await request("/domains/check", {
       method: "POST",
       body: {
         domains,
-        with_price: true,
+        with_price: Boolean(withPrice),
       },
     });
 
@@ -238,14 +240,60 @@ function createOpenproviderClient(options = {}) {
     return results;
   }
 
+  let tldCache = null;
+  let tldCacheExpiresAt = 0;
+
+  async function listActiveTldNames({ force = false } = {}) {
+    const now = nowFn();
+    if (!force && tldCache && now < tldCacheExpiresAt) {
+      return tldCache;
+    }
+
+    const names = [];
+    let offset = 0;
+    for (let page = 0; page < 50; page += 1) {
+      const { response, payload } = await request(
+        `/tlds?limit=500&offset=${offset}`,
+        { method: "GET" }
+      );
+      if (!response.ok || !payload || payload.code !== 0 || !payload.data) {
+        const error = new Error("openprovider_tld_list_failed");
+        error.code = "openprovider_tld_list_failed";
+        throw error;
+      }
+      const results = Array.isArray(payload.data.results) ? payload.data.results : [];
+      const total = Number(payload.data.total);
+      for (const entry of results) {
+        const name = entry && entry.name != null ? String(entry.name).trim().toLowerCase() : "";
+        if (name) {
+          names.push(name);
+        }
+      }
+      if (!results.length || results.length < 500 || (Number.isFinite(total) && names.length >= total)) {
+        break;
+      }
+      offset += results.length;
+    }
+
+    const unique = [...new Set(names)].sort((a, b) => a.localeCompare(b));
+    tldCache = unique;
+    tldCacheExpiresAt = now + DEFAULT_TLD_CACHE_MS;
+    return unique;
+  }
+
   return {
     readConfig: () => readConfig(env),
     login,
     clearToken,
     request,
     checkDomains,
+    listActiveTldNames,
     // Test helpers
     _getCachedTokenState: () => ({ token: cachedToken, expiresAt: tokenExpiresAt }),
+    _setTldCacheForTests: (names, expiresAt = Date.now() + DEFAULT_TLD_CACHE_MS) => {
+      tldCache = names;
+      tldCacheExpiresAt = expiresAt;
+    },
   };
 }
 

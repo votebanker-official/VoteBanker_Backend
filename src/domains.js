@@ -3,24 +3,29 @@ const rateLimit = require("express-rate-limit");
 
 const { createOpenproviderClient, detectEgressIp } = require("./openprovider");
 
-// Standard TLDs first, in the product display order.
-const DEFAULT_EXTENSIONS = ["com", "in", "org", "co", "ai", "io", "net"];
-const ALLOWED_EXTENSIONS = new Set([
-  "com",
-  "in",
-  "org",
-  "net",
+// Standard TLDs shown first (when available).
+const STANDARD_EXTENSIONS = ["com", "in", "org", "co", "ai", "io", "net"];
+// Additional popular TLDs checked after the standard set.
+const EXTRA_EXTENSIONS = [
   "co.in",
   "info",
   "biz",
-  "io",
-  "ai",
-  "co",
   "online",
   "site",
   "store",
   "xyz",
-]);
+  "me",
+  "app",
+  "dev",
+  "tech",
+  "live",
+  "world",
+  "club",
+  "shop",
+  "blog",
+];
+const DEFAULT_EXTENSIONS = [...STANDARD_EXTENSIONS, ...EXTRA_EXTENSIONS];
+const ALLOWED_EXTENSIONS = new Set(DEFAULT_EXTENSIONS);
 
 const UNAVAILABLE_STATUSES = new Set([
   "active",
@@ -32,7 +37,7 @@ const UNAVAILABLE_STATUSES = new Set([
 ]);
 
 const MAX_NAME_LENGTH = 63;
-const DEFAULT_MAX_EXTENSIONS = 10;
+const DEFAULT_MAX_EXTENSIONS = 30;
 const DEFAULT_BATCH_SIZE = 10;
 
 // 1–63 chars, alphanumeric edges, hyphens allowed in the middle.
@@ -238,24 +243,30 @@ function mapDomainResult(entry, requested) {
   };
 }
 
-function extensionRank(domain) {
+function domainExtension(domain) {
   const parts = String(domain || "").toLowerCase().split(".");
   if (parts.length < 2) {
-    return DEFAULT_EXTENSIONS.length + 10;
+    return "";
   }
-  const extension = parts.slice(1).join(".");
-  const index = DEFAULT_EXTENSIONS.indexOf(extension);
-  return index === -1 ? DEFAULT_EXTENSIONS.length + 5 : index;
+  return parts.slice(1).join(".");
+}
+
+function extensionRank(domain) {
+  const extension = domainExtension(domain);
+  const standardIndex = STANDARD_EXTENSIONS.indexOf(extension);
+  if (standardIndex !== -1) {
+    return standardIndex;
+  }
+  const extraIndex = EXTRA_EXTENSIONS.indexOf(extension);
+  if (extraIndex !== -1) {
+    return STANDARD_EXTENSIONS.length + extraIndex;
+  }
+  return STANDARD_EXTENSIONS.length + EXTRA_EXTENSIONS.length + 5;
 }
 
 function sortDomainResults(results) {
   return [...results].sort((a, b) => {
-    // Available (including premium free) first, then unavailable.
-    if (Boolean(a.available) !== Boolean(b.available)) {
-      return a.available ? -1 : 1;
-    }
-    // Premium available still stays with available group; prefer non-premium only as tie-break after TLD order? 
-    // Keep standard TLD order within each availability group.
+    // Standard available TLDs first, then other available TLDs.
     const rankDiff = extensionRank(a.domain) - extensionRank(b.domain);
     if (rankDiff !== 0) {
       return rankDiff;
@@ -307,24 +318,26 @@ async function searchDomains(body, options = {}) {
       }
     }
 
-    const results = sortDomainResults(
-      requests.map((requested) => {
-        const key = `${requested.name}.${requested.extension}`.toLowerCase();
-        const entry = byDomain.get(key);
-        if (!entry) {
-          return {
-            domain: key,
-            available: false,
-            status: "unknown",
-            price: null,
-            supplierPrice: null,
-            isPremium: false,
-            error: "missing_result",
-          };
-        }
-        return mapDomainResult(entry, requested);
-      })
-    );
+    const mapped = requests.map((requested) => {
+      const key = `${requested.name}.${requested.extension}`.toLowerCase();
+      const entry = byDomain.get(key);
+      if (!entry) {
+        return {
+          domain: key,
+          available: false,
+          status: "unknown",
+          price: null,
+          supplierPrice: null,
+          isPremium: false,
+          error: "missing_result",
+        };
+      }
+      return mapDomainResult(entry, requested);
+    });
+
+    // Product rule: only show domains Openprovider confirmed as free/available.
+    // Standard TLDs first, then other available TLDs.
+    const results = sortDomainResults(mapped.filter((item) => item.available === true));
 
     return { status: 200, body: { success: true, results } };
   } catch (error) {
@@ -420,6 +433,8 @@ function createDomainsRouter(options = {}) {
 module.exports = {
   ALLOWED_EXTENSIONS,
   DEFAULT_EXTENSIONS,
+  EXTRA_EXTENSIONS,
+  STANDARD_EXTENSIONS,
   createDomainsRouter,
   domainDiagnostics,
   extractPrice,

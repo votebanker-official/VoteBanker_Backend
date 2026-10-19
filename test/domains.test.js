@@ -37,7 +37,10 @@ test("pasted full domains keep only the label", () => {
   assert.equal(normalizeName("https://www.VoteBanker.com/path"), "votebanker");
   const parsed = validateDomainSearch({ name: "votebanker.co.in" });
   assert.equal(parsed.value.name, "votebanker");
-  assert.deepEqual(parsed.value.extensions, ["com", "in", "org", "co", "ai", "io", "net"]);
+  assert.equal(parsed.value.extensions[0], "com");
+  assert.equal(parsed.value.extensions[1], "in");
+  assert.ok(parsed.value.extensions.includes("ai"));
+  assert.ok(parsed.value.extensions.includes("online"));
 });
 
 test("invalid input is rejected", () => {
@@ -59,10 +62,10 @@ test("invalid input is rejected", () => {
 test("multiple extensions are accepted within the limit", () => {
   const parsed = validateDomainSearch({
     name: "votebanker",
-    extensions: ["com", "in", "org", "co", "ai", "io", "net"],
+    extensions: ["com", "in", "org", "co", "ai", "io", "net", "online"],
   });
   assert.equal(parsed.error, undefined);
-  assert.equal(parsed.value.extensions.length, 7);
+  assert.equal(parsed.value.extensions.length, 8);
 });
 
 test("price mapping prefers reseller currency and amount", () => {
@@ -211,13 +214,14 @@ test("successful availability results include free and unavailable domains", asy
   );
   assert.equal(result.status, 200);
   assert.equal(result.body.success, true);
+  // Only available domains are returned.
+  assert.equal(result.body.results.length, 1);
+  assert.equal(result.body.results[0].domain, "votebanker.com");
   assert.equal(result.body.results[0].available, true);
   assert.equal(result.body.results[0].status, "free");
-  assert.equal(result.body.results[1].available, false);
-  assert.equal(result.body.results[1].status, "in use");
 });
 
-test("reserved domains and missing pricing are represented correctly", async () => {
+test("reserved domains are omitted and available domains keep pricing null when missing", async () => {
   const fetchImpl = mockFetchSequence([
     async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
     async () =>
@@ -236,14 +240,37 @@ test("reserved domains and missing pricing are represented correctly", async () 
     { name: "votebanker", extensions: ["org", "net"] },
     { env, fetchImpl }
   );
-  // Available results are sorted above unavailable ones.
+  assert.equal(result.body.results.length, 1);
   assert.equal(result.body.results[0].domain, "votebanker.net");
   assert.equal(result.body.results[0].available, true);
   assert.equal(result.body.results[0].price, null);
-  assert.equal(result.body.results[1].domain, "votebanker.org");
-  assert.equal(result.body.results[1].available, false);
-  assert.equal(result.body.results[1].status, "reserved");
-  assert.equal(result.body.results[1].price, null);
+});
+
+test("standard available TLDs are ordered before other available TLDs", async () => {
+  const fetchImpl = mockFetchSequence([
+    async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
+    async () =>
+      jsonResponse(200, {
+        code: 0,
+        data: {
+          results: [
+            { domain: "vote.online", status: "free", price: { reseller: { currency: "INR", price: 100 } } },
+            { domain: "vote.ai", status: "free", price: { reseller: { currency: "INR", price: 200 } } },
+            { domain: "vote.com", status: "free", price: { reseller: { currency: "INR", price: 300 } } },
+            { domain: "vote.in", status: "active" },
+          ],
+        },
+      }),
+  ]);
+
+  const result = await searchDomains(
+    { name: "vote", extensions: ["online", "ai", "com", "in"] },
+    { env, fetchImpl }
+  );
+  assert.deepEqual(
+    result.body.results.map((item) => item.domain),
+    ["vote.com", "vote.ai", "vote.online"]
+  );
 });
 
 test("premium domains keep the premium flag and reseller price", async () => {

@@ -15,6 +15,7 @@ const { createMerchandiseRouter } = require("./merchandise");
 const { createSpeechesRouter } = require("./speeches");
 const { createLettersRouter } = require("./letters");
 const { createDomainsRouter } = require("./domains");
+const { createVrmRouter } = require("./routes/vrm");
 
 loadEnv();
 
@@ -91,6 +92,10 @@ app.get("/", (_req, res) => {
       "POST /api/letters/generate",
       "POST /api/domains/search",
       "GET /api/domains/diagnostics",
+      "GET /api/vrm/records",
+      "PATCH /api/vrm/records/:id/contacts",
+      "POST /api/vrm/import/preview-ocr",
+      "POST /api/vrm/import/confirm",
     ],
   });
 });
@@ -110,6 +115,7 @@ app.use("/api/merchandise", createMerchandiseRouter());
 app.use("/api/speeches", createSpeechesRouter());
 app.use("/api/letters", createLettersRouter());
 app.use("/api/domains", createDomainsRouter());
+app.use("/api/vrm", createVrmRouter());
 
 app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });

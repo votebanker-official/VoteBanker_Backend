@@ -11,4 +11,9 @@ npm-debug.log*
 *.p12
 *.pfx
 secrets/
+tmp/
+*EROLL*.pdf
+electoral-roll*.pdf
+vrm-import-preview.json
+vrm-import-result.json
 

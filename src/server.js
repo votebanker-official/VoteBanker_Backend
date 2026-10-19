@@ -67,6 +67,7 @@ app.get("/", (_req, res) => {
       "POST /api/speeches/generate",
       "POST /api/letters/generate",
       "POST /api/domains/search",
+      "GET /api/domains/diagnostics",
     ],
   });
 });

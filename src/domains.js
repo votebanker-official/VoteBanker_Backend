@@ -1,7 +1,7 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 
-const { createOpenproviderClient } = require("./openprovider");
+const { createOpenproviderClient, detectEgressIp } = require("./openprovider");
 
 const DEFAULT_EXTENSIONS = ["com", "org", "net", "in", "io", "ai", "co"];
 const ALLOWED_EXTENSIONS = new Set([
@@ -255,10 +255,61 @@ async function searchDomains(body, options = {}) {
     const status =
       code === "openprovider_timeout" || code === "openprovider_unreachable"
         ? 504
-        : code === "openprovider_auth_failed" || code === "openprovider_access_denied"
-          ? 502
-          : 502;
-    return { status, body: { success: false, error: code } };
+        : 502;
+
+    const body = { success: false, error: code };
+    if (code === "openprovider_access_denied" || code === "openprovider_auth_failed") {
+      const egressIp = await detectEgressIp(options.fetchImpl || fetch);
+      if (egressIp) {
+        body.serverIp = egressIp;
+      }
+    }
+    return { status, body };
+  }
+}
+
+async function domainDiagnostics(options = {}) {
+  const env = options.env || process.env;
+  const client = createOpenproviderClient({ env, fetchImpl: options.fetchImpl });
+  const config = client.readConfig();
+  const egressIp = await detectEgressIp(options.fetchImpl || fetch);
+
+  if (config.error) {
+    return {
+      status: 200,
+      body: {
+        configured: false,
+        error: config.error,
+        serverIp: egressIp,
+        loginIp: "0.0.0.0",
+      },
+    };
+  }
+
+  try {
+    await client.login({ force: true });
+    return {
+      status: 200,
+      body: {
+        configured: true,
+        loginOk: true,
+        serverIp: egressIp,
+        loginIp: "0.0.0.0",
+        baseUrl: config.baseUrl,
+      },
+    };
+  } catch (error) {
+    return {
+      status: 200,
+      body: {
+        configured: true,
+        loginOk: false,
+        error: error && error.code ? error.code : "openprovider_auth_failed",
+        serverIp: egressIp,
+        loginIp: "0.0.0.0",
+        baseUrl: config.baseUrl,
+      },
+    };
   }
 }
 
@@ -270,6 +321,11 @@ function createDomainsRouter(options = {}) {
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, error: "rate_limited" },
+  });
+
+  router.get("/diagnostics", limiter, async (_req, res) => {
+    const result = await domainDiagnostics(options);
+    res.status(result.status).json(result.body);
   });
 
   router.post("/search", limiter, async (req, res) => {
@@ -284,6 +340,7 @@ module.exports = {
   ALLOWED_EXTENSIONS,
   DEFAULT_EXTENSIONS,
   createDomainsRouter,
+  domainDiagnostics,
   extractPrice,
   mapDomainResult,
   normalizeExtension,

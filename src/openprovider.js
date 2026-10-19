@@ -8,12 +8,18 @@ const DEFAULT_TOKEN_TTL_MS = 55 * 60 * 1000;
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 function readConfig(env = process.env) {
-  const username = String(env.OPENPROVIDER_USERNAME || "").trim();
-  const password = String(env.OPENPROVIDER_PASSWORD || "");
+  const username = String(env.OPENPROVIDER_USERNAME || "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
+  const password = String(env.OPENPROVIDER_PASSWORD || "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
   const baseUrl = String(env.OPENPROVIDER_BASE_URL || DEFAULT_BASE_URL)
     .trim()
     .replace(/\/+$/, "");
-  const ip = String(env.OPENPROVIDER_IP || "0.0.0.0").trim() || "0.0.0.0";
+  // Always 0.0.0.0 for login. Setting a home/office IP here breaks Railway:
+  // the token becomes bound to that IP while requests leave from Railway's IP.
+  const ip = "0.0.0.0";
   const timeoutMs = Number(env.OPENPROVIDER_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
 
   if (!username || !password) {
@@ -24,6 +30,34 @@ function readConfig(env = process.env) {
   }
 
   return { username, password, baseUrl, ip, timeoutMs };
+}
+
+async function detectEgressIp(fetchImpl = fetch, timeoutMs = 5_000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl("https://api.ipify.org?format=json", {
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const body = await response.json();
+    const ip = body && typeof body.ip === "string" ? body.ip.trim() : "";
+    return ip || null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function mapUpstreamFailure(payload, fallback = "openprovider_check_failed") {
+  const upstreamCode = payload && payload.code;
+  if (upstreamCode === 10005) {
+    return "openprovider_access_denied";
+  }
+  return fallback;
 }
 
 function tokenExpiryMs(token, now = Date.now()) {
@@ -118,8 +152,10 @@ function createOpenproviderClient(options = {}) {
 
       const token = body && body.data && body.data.token;
       if (!response.ok || body.code !== 0 || !token) {
-        const error = new Error("openprovider_auth_failed");
-        error.code = "openprovider_auth_failed";
+        const code = mapUpstreamFailure(body, "openprovider_auth_failed");
+        const error = new Error(code);
+        error.code = code;
+        error.upstreamCode = body && body.code;
         throw error;
       }
 
@@ -185,15 +221,10 @@ function createOpenproviderClient(options = {}) {
     });
 
     if (!response.ok || !payload || payload.code !== 0 || !payload.data) {
-      const upstreamCode = payload && payload.code;
-      // 10005 = calling IP blocked by Openprovider whitelist/blacklist.
-      const code =
-        upstreamCode === 10005
-          ? "openprovider_access_denied"
-          : "openprovider_check_failed";
+      const code = mapUpstreamFailure(payload, "openprovider_check_failed");
       const error = new Error(code);
       error.code = code;
-      error.upstreamCode = upstreamCode;
+      error.upstreamCode = payload && payload.code;
       throw error;
     }
 
@@ -221,6 +252,8 @@ function createOpenproviderClient(options = {}) {
 module.exports = {
   DEFAULT_BASE_URL,
   createOpenproviderClient,
+  detectEgressIp,
+  mapUpstreamFailure,
   readConfig,
   tokenExpiryMs,
 };

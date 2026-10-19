@@ -290,6 +290,10 @@ test("Openprovider IP access denial is mapped clearly", async () => {
   const fetchImpl = mockFetchSequence([
     async () => jsonResponse(200, { code: 0, data: { token: "token" } }),
     async () => jsonResponse(500, { code: 10005, desc: "Access denied." }),
+    async (url) => {
+      assert.match(String(url), /ipify/);
+      return jsonResponse(200, { ip: "203.0.113.10" });
+    },
   ]);
   const result = await searchDomains(
     { name: "votebanker", extensions: ["com"] },
@@ -297,6 +301,7 @@ test("Openprovider IP access denial is mapped clearly", async () => {
   );
   assert.equal(result.status, 502);
   assert.equal(result.body.error, "openprovider_access_denied");
+  assert.equal(result.body.serverIp, "203.0.113.10");
 });
 
 test("missing Openprovider credentials return a configuration error name", async () => {

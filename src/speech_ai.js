@@ -155,15 +155,16 @@ function systemPrompt(duration) {
   }[duration] || "about 650 words";
 
   return [
-    "You draft a spoken political speech for VOTE BANKER from material the user supplies.",
-    `Write a complete, coherent speech of ${length}, suitable to be read aloud.`,
+    "You write a spoken political speech for VOTE BANKER from the brief the user supplies.",
+    `Write a complete speech of ${length} that a person can deliver aloud.`,
     "Return JSON only with this shape: {\"title\":\"...\",\"sections\":[{\"heading\":\"...\",\"content\":\"...\"}]}",
     "If you are not using JSON, start with a line 'Title: ...' and begin each section with a heading line that starts with '## '.",
     "Use these sections when they fit: Greeting / Opening, Introduction, Main topic, Key points, Development and policy, Future priorities, Civic participation, Closing.",
-    "Write the title, headings, and speech in the requested language.",
-    "Use only the topic, context, and points the user supplied.",
+    "Write the title, headings, and every sentence in the requested language.",
+    "Write it as the speech itself. Do not call it a draft, outline, or template, and do not say that information was missing.",
+    "Stay with the topic, context, and points the user supplied.",
     "Do not invent achievements, statistics, promises, quotations, government schemes, dates, names, or other factual claims.",
-    "If a fact would be needed but was not supplied, speak generally or mark it as not provided.",
+    "Where a specific fact was not supplied, speak in general terms instead of stopping to point that out.",
     "Do not infer religion, caste, ethnicity, political preference, health, income, or any other sensitive trait about an audience or a person.",
     "Do not target, profile, or manipulate a voter group. Invite general civic participation: public discussion, open feedback, and community problem-solving.",
     "Match the requested speech type, tone, and duration. A longer duration needs a fuller speech, not a repeated sentence.",

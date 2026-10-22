@@ -5,6 +5,21 @@ const { createOpenproviderClient, detectEgressIp } = require("./openprovider");
 
 // Standard TLDs shown first (when available).
 const STANDARD_EXTENSIONS = ["com", "in", "org", "co", "ai", "io", "net"];
+// Politician-related TLDs. Shown only when Openprovider actually sells them.
+const POLITICAL_EXTENSIONS = [
+  "leader",
+  "captain",
+  "page",
+  "boss",
+  "neta",
+  "vote",
+  "voto",
+  "voting",
+  "democrat",
+  "republican",
+  "gop",
+  "party",
+];
 // Additional popular TLDs checked after the standard set.
 const EXTRA_EXTENSIONS = [
   "co.in",
@@ -24,8 +39,14 @@ const EXTRA_EXTENSIONS = [
   "shop",
   "blog",
 ];
-const DEFAULT_EXTENSIONS = [...STANDARD_EXTENSIONS, ...EXTRA_EXTENSIONS];
+const DEFAULT_EXTENSIONS = [
+  ...STANDARD_EXTENSIONS,
+  ...POLITICAL_EXTENSIONS,
+  ...EXTRA_EXTENSIONS,
+];
 const ALLOWED_EXTENSIONS = new Set(DEFAULT_EXTENSIONS);
+// Customer-facing INR prices stay on the Openprovider amount, with this floor.
+const MIN_INR_PRICE = 1500;
 
 const UNAVAILABLE_STATUSES = new Set([
   "active",
@@ -84,7 +105,7 @@ function normalizeName(raw) {
   value = value.replace(/\.+$/, "");
 
   // If the client pasted a full domain with a known extension, keep only the label.
-  const known = [...STANDARD_EXTENSIONS, ...EXTRA_EXTENSIONS].sort((a, b) => b.length - a.length);
+  const known = [...DEFAULT_EXTENSIONS].sort((a, b) => b.length - a.length);
   for (const extension of known) {
     const suffix = `.${extension}`;
     if (value.endsWith(suffix)) {
@@ -199,6 +220,29 @@ function extractPrice(entry) {
   return null;
 }
 
+function extractResellerPrice(group) {
+  const reseller = group && group.reseller;
+  if (!reseller || reseller.price == null || reseller.currency == null) {
+    return null;
+  }
+  const amount = Number(reseller.price);
+  const currency = String(reseller.currency || "").trim().toUpperCase();
+  if (!Number.isFinite(amount) || !currency) {
+    return null;
+  }
+  return { amount, currency, source: "reseller" };
+}
+
+function applyInrFloor(price) {
+  if (!price || price.currency !== "INR" || !Number.isFinite(price.amount)) {
+    return price;
+  }
+  if (price.amount < MIN_INR_PRICE) {
+    return { ...price, amount: MIN_INR_PRICE };
+  }
+  return price;
+}
+
 function mapDomainResult(entry, requested) {
   const domain = String(
     (entry && entry.domain) ||
@@ -218,14 +262,7 @@ function mapDomainResult(entry, requested) {
 
   const rawStatus = String(entry.status || "").trim().toLowerCase();
   const isPremium = Boolean(entry.is_premium);
-  const price = extractPrice(entry);
-  const supplier =
-    entry.price && entry.price.product && entry.price.product.price != null
-      ? {
-          amount: Number(entry.price.product.price),
-          currency: String(entry.price.product.currency || "").trim().toUpperCase() || null,
-        }
-      : null;
+  const price = applyInrFloor(extractPrice(entry));
 
   if (rawStatus === "free") {
     return {
@@ -233,10 +270,7 @@ function mapDomainResult(entry, requested) {
       available: true,
       status: "free",
       price,
-      supplierPrice:
-        supplier && Number.isFinite(supplier.amount) && supplier.currency
-          ? supplier
-          : null,
+      renewalPrice: null,
       isPremium,
     };
   }
@@ -248,10 +282,7 @@ function mapDomainResult(entry, requested) {
       // Normalize Openprovider "active" (registered) to a clear unavailable status.
       status: rawStatus === "active" ? "in use" : rawStatus,
       price,
-      supplierPrice:
-        supplier && Number.isFinite(supplier.amount) && supplier.currency
-          ? supplier
-          : null,
+      renewalPrice: null,
       isPremium,
     };
   }
@@ -261,13 +292,36 @@ function mapDomainResult(entry, requested) {
     available: false,
     status: rawStatus || "unknown",
     price,
-    supplierPrice:
-      supplier && Number.isFinite(supplier.amount) && supplier.currency
-        ? supplier
-        : null,
+    renewalPrice: null,
     isPremium,
     error: "unknown_status",
   };
+}
+
+async function attachRenewalPrices(client, results) {
+  const available = results.filter((item) => item.available && item.domain);
+  await mapPool(available, 8, async (item) => {
+    const parts = String(item.domain).split(".");
+    if (parts.length < 2 || typeof client.getDomainPrice !== "function") {
+      return item;
+    }
+    try {
+      const data = await client.getDomainPrice({
+        name: parts[0],
+        extension: parts.slice(1).join("."),
+        operation: "renew",
+        period: 1,
+      });
+      item.renewalPrice = applyInrFloor(extractResellerPrice(data && data.price));
+    } catch (error) {
+      console.error(
+        `renewal price failed: ${error && error.code ? error.code : error}`
+      );
+      item.renewalPrice = null;
+    }
+    return item;
+  });
+  return results;
 }
 
 function domainExtension(domain) {
@@ -278,20 +332,26 @@ function domainExtension(domain) {
   return parts.slice(1).join(".");
 }
 
+function extensionRank(extension) {
+  const standard = STANDARD_EXTENSIONS.indexOf(extension);
+  if (standard !== -1) {
+    return standard;
+  }
+  const political = POLITICAL_EXTENSIONS.indexOf(extension);
+  if (political !== -1) {
+    return STANDARD_EXTENSIONS.length + political;
+  }
+  return STANDARD_EXTENSIONS.length + POLITICAL_EXTENSIONS.length;
+}
+
 function sortDomainResults(results) {
   return [...results].sort((a, b) => {
     const aExt = domainExtension(a.domain);
     const bExt = domainExtension(b.domain);
-    const aStandard = STANDARD_EXTENSIONS.indexOf(aExt);
-    const bStandard = STANDARD_EXTENSIONS.indexOf(bExt);
-    const aIsStandard = aStandard !== -1;
-    const bIsStandard = bStandard !== -1;
-
-    if (aIsStandard !== bIsStandard) {
-      return aIsStandard ? -1 : 1;
-    }
-    if (aIsStandard && bIsStandard && aStandard !== bStandard) {
-      return aStandard - bStandard;
+    const aRank = extensionRank(aExt);
+    const bRank = extensionRank(bExt);
+    if (aRank !== bRank) {
+      return aRank - bRank;
     }
     if (Boolean(a.isPremium) !== Boolean(b.isPremium)) {
       return a.isPremium ? 1 : -1;
@@ -340,7 +400,7 @@ async function mapPool(items, concurrency, worker, { continueOnError = false } =
 function prioritizeExtensions(extensions) {
   const seen = new Set();
   const ordered = [];
-  for (const extension of STANDARD_EXTENSIONS) {
+  for (const extension of [...STANDARD_EXTENSIONS, ...POLITICAL_EXTENSIONS]) {
     if (extensions.includes(extension) && !seen.has(extension)) {
       seen.add(extension);
       ordered.push(extension);
@@ -356,16 +416,46 @@ function prioritizeExtensions(extensions) {
   return ordered;
 }
 
+async function omitPoliticalTldsOpenproviderDoesNotSell(extensions, client) {
+  const wantsPolitical = extensions.some((extension) =>
+    POLITICAL_EXTENSIONS.includes(extension)
+  );
+  if (!wantsPolitical || typeof client.listActiveTldNames !== "function") {
+    return extensions;
+  }
+
+  let catalog;
+  try {
+    catalog = new Set(await client.listActiveTldNames());
+  } catch (error) {
+    console.error(
+      `political tld catalog failed: ${error && error.code ? error.code : error}`
+    );
+    return extensions.filter((extension) => !POLITICAL_EXTENSIONS.includes(extension));
+  }
+
+  return extensions.filter(
+    (extension) => !POLITICAL_EXTENSIONS.includes(extension) || catalog.has(extension)
+  );
+}
+
 async function resolveExtensions(parsed, client, env) {
   if (!parsed.useCatalog) {
-    return prioritizeExtensions(parsed.extensions);
+    return omitPoliticalTldsOpenproviderDoesNotSell(
+      prioritizeExtensions(parsed.extensions),
+      client
+    );
   }
 
   const catalog = await client.listActiveTldNames();
-  const merged = prioritizeExtensions([
-    ...STANDARD_EXTENSIONS,
-    ...catalog,
-  ]);
+  const merged = await omitPoliticalTldsOpenproviderDoesNotSell(
+    prioritizeExtensions([
+      ...STANDARD_EXTENSIONS,
+      ...POLITICAL_EXTENSIONS,
+      ...catalog,
+    ]),
+    client
+  );
   const max = maxExtensions(env);
   if (max > 0 && merged.length > max) {
     // Keep all standard TLDs, then fill with catalog order.
@@ -442,11 +532,12 @@ async function searchDomains(body, options = {}) {
     const upstream = await checkAllDomains(client, requests, env, {
       resilient: Boolean(parsed.value.useCatalog),
     });
-    const results = sortDomainResults(
+    const available = sortDomainResults(
       upstream
         .map((entry) => mapDomainResult(entry))
         .filter((item) => item.available === true)
     );
+    const results = await attachRenewalPrices(client, available);
 
     return {
       status: 200,
@@ -458,14 +549,21 @@ async function searchDomains(body, options = {}) {
     };
   } catch (error) {
     const code = error && error.code ? error.code : "openprovider_check_failed";
-    console.error(`domain search failed: ${code}`);
+    const upstream = error && error.upstreamCode != null ? ` upstream ${error.upstreamCode}` : "";
+    console.error(`domain search failed: ${code}${upstream}`);
     const status =
       code === "openprovider_timeout" || code === "openprovider_unreachable"
         ? 504
         : 502;
 
     const body = { success: false, error: code };
-    if (code === "openprovider_access_denied" || code === "openprovider_auth_failed") {
+    if (error && error.upstreamCode != null) {
+      body.upstreamCode = error.upstreamCode;
+    }
+    if (error && error.upstreamDesc) {
+      body.upstreamDesc = error.upstreamDesc;
+    }
+    if (code === "openprovider_access_denied") {
       const egressIp = await detectEgressIp(options.fetchImpl || fetch);
       if (egressIp) {
         body.serverIp = egressIp;
@@ -508,17 +606,21 @@ async function domainDiagnostics(options = {}) {
       },
     };
   } catch (error) {
-    return {
-      status: 200,
-      body: {
-        configured: true,
-        loginOk: false,
-        error: error && error.code ? error.code : "openprovider_auth_failed",
-        serverIp: egressIp,
-        loginIp: "0.0.0.0",
-        baseUrl: config.baseUrl,
-      },
+    const body = {
+      configured: true,
+      loginOk: false,
+      error: error && error.code ? error.code : "openprovider_auth_failed",
+      serverIp: egressIp,
+      loginIp: "0.0.0.0",
+      baseUrl: config.baseUrl,
     };
+    if (error && error.upstreamCode != null) {
+      body.upstreamCode = error.upstreamCode;
+    }
+    if (error && error.upstreamDesc) {
+      body.upstreamDesc = error.upstreamDesc;
+    }
+    return { status: 200, body };
   }
 }
 
@@ -549,10 +651,12 @@ module.exports = {
   ALLOWED_EXTENSIONS,
   DEFAULT_EXTENSIONS,
   EXTRA_EXTENSIONS,
+  POLITICAL_EXTENSIONS,
   STANDARD_EXTENSIONS,
   createDomainsRouter,
   domainDiagnostics,
   extractPrice,
+  extractResellerPrice,
   mapDomainResult,
   normalizeExtension,
   normalizeName,

@@ -67,6 +67,10 @@ test("regenerate can vary the draft and Kannada uses Kannada headings", async ()
   const kannada = await generateSpeech({ ...base, language: "Kannada" }, { env: {} });
   assert.equal(kannada.body.speech.sections[0].heading, "ನಮಸ್ಕಾರ");
   assert.match(kannada.body.speech.fullText, /education/i);
+
+  const gujarati = await generateSpeech({ ...base, language: "Gujarati" }, { env: {} });
+  assert.equal(gujarati.body.speech.language, "Gujarati");
+  assert.equal(gujarati.body.speech.sections[0].heading, "અભિવાદન");
 });
 
 test("a configured model returns its speech and keeps the request metadata", async () => {

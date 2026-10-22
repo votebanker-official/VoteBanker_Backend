@@ -107,7 +107,7 @@ test("status mapping never marks unknown results as available", () => {
       available: true,
       status: "free",
       price: { amount: 12.5, currency: "USD", source: "reseller" },
-      supplierPrice: null,
+      renewalPrice: null,
       isPremium: false,
     }
   );
@@ -124,7 +124,7 @@ test("status mapping never marks unknown results as available", () => {
         reseller: { currency: "INR", price: 1043 },
       },
     }).price,
-    { amount: 1043, currency: "INR", source: "reseller" }
+    { amount: 1500, currency: "INR", source: "reseller" }
   );
   const unknown = mapDomainResult({ domain: "a.com", status: "weird" });
   assert.equal(unknown.available, false);
@@ -142,6 +142,20 @@ test("status mapping never marks unknown results as available", () => {
 function mockFetchSequence(handlers) {
   let index = 0;
   return async (url, options) => {
+    if (String(url).includes("/domains/prices")) {
+      const params = new URL(String(url)).searchParams;
+      const name = params.get("domain.name") || "name";
+      return jsonResponse(200, {
+        code: 0,
+        data: {
+          price: {
+            reseller: { currency: "INR", price: 1110.96 },
+            product: { currency: "USD", price: 11.2 },
+          },
+          domain: name,
+        },
+      });
+    }
     const handler = handlers[index++];
     assert.ok(handler, `unexpected fetch #${index} to ${url}`);
     return handler(String(url), options || {});
@@ -191,6 +205,9 @@ test("Openprovider authentication failure surfaces safely", async () => {
   assert.equal(result.body.success, false);
   assert.equal(result.body.error, "openprovider_auth_failed");
   assert.equal(result.body.token, undefined);
+  assert.equal(result.body.serverIp, undefined);
+  assert.equal(result.body.upstreamCode, 1);
+  assert.equal(result.body.upstreamDesc, "denied");
 });
 
 test("expired token is refreshed and the check is retried", async () => {
@@ -274,6 +291,12 @@ test("successful availability results include only free domains with prices", as
   assert.equal(result.body.results[0].available, true);
   assert.equal(result.body.results[0].status, "free");
   assert.equal(result.body.results[0].price.amount, 12.5);
+  assert.deepEqual(result.body.results[0].renewalPrice, {
+    amount: 1500,
+    currency: "INR",
+    source: "reseller",
+  });
+  assert.equal(result.body.results[0].supplierPrice, undefined);
 });
 
 test("reserved domains are omitted and available domains keep pricing null when missing", async () => {
@@ -296,6 +319,121 @@ test("reserved domains are omitted and available domains keep pricing null when 
   assert.equal(result.body.results[0].domain, "votebanker.net");
   assert.equal(result.body.results[0].available, true);
   assert.equal(result.body.results[0].price, null);
+});
+
+test("INR prices below 1500 are raised and higher Openprovider prices stay exact", () => {
+  assert.deepEqual(
+    mapDomainResult({
+      domain: "vaishnavi.xyz",
+      status: "free",
+      price: { reseller: { currency: "INR", price: 900.25 } },
+    }).price,
+    { amount: 1500, currency: "INR", source: "reseller" }
+  );
+  assert.deepEqual(
+    mapDomainResult({
+      domain: "vaishnavi.ai",
+      status: "free",
+      price: { reseller: { currency: "INR", price: 15870.8 } },
+    }).price,
+    { amount: 15870.8, currency: "INR", source: "reseller" }
+  );
+  assert.deepEqual(
+    mapDomainResult({
+      domain: "vaishnavi.com",
+      status: "free",
+      price: { reseller: { currency: "USD", price: 12.5 } },
+    }).price,
+    { amount: 12.5, currency: "USD", source: "reseller" }
+  );
+});
+
+test("political TLDs are shown only when Openprovider sells them", async () => {
+  const client = createOpenproviderClient({
+    env,
+    fetchImpl: async () => {
+      throw new Error("unused");
+    },
+  });
+  client._setTldCacheForTests(["com", "page", "vote"]);
+  const checked = [];
+  client.checkDomains = async (domains, { withPrice } = {}) => {
+    for (const item of domains) {
+      if (!withPrice) {
+        checked.push(item.extension);
+      }
+    }
+    return domains.map((item) => ({
+      domain: `${item.name}.${item.extension}`,
+      status: "free",
+      ...(withPrice
+        ? { price: { reseller: { currency: "INR", price: 2200 } } }
+        : {}),
+    }));
+  };
+  client.getDomainPrice = async () => ({
+    price: { reseller: { currency: "INR", price: 2200 } },
+  });
+
+  const result = await searchDomains(
+    {
+      name: "vaishnavi",
+      extensions: ["boss", "com", "leader", "page", "neta", "vote"],
+    },
+    { env, client }
+  );
+  assert.equal(result.status, 200);
+  assert.deepEqual(checked, ["com", "page", "vote"]);
+  assert.deepEqual(
+    result.body.results.map((item) => item.domain),
+    ["vaishnavi.com", "vaishnavi.page", "vaishnavi.vote"]
+  );
+  assert.equal(result.body.results.some((item) => item.domain.endsWith(".neta")), false);
+  assert.equal(result.body.results.some((item) => item.domain.endsWith(".leader")), false);
+  assert.equal(result.body.results.some((item) => item.domain.endsWith(".boss")), false);
+});
+
+test("political TLDs are omitted when the Openprovider catalog cannot be confirmed", async () => {
+  const client = createOpenproviderClient({
+    env,
+    fetchImpl: async () => {
+      throw new Error("unused");
+    },
+  });
+  client.listActiveTldNames = async () => {
+    const error = new Error("openprovider_tld_list_failed");
+    error.code = "openprovider_tld_list_failed";
+    throw error;
+  };
+  const checked = [];
+  client.checkDomains = async (domains, { withPrice } = {}) => {
+    for (const item of domains) {
+      if (!withPrice) {
+        checked.push(item.extension);
+      }
+    }
+    return domains.map((item) => ({
+      domain: `${item.name}.${item.extension}`,
+      status: "free",
+      ...(withPrice
+        ? { price: { reseller: { currency: "INR", price: 1805.3 } } }
+        : {}),
+    }));
+  };
+  client.getDomainPrice = async () => ({
+    price: { reseller: { currency: "INR", price: 1805.3 } },
+  });
+
+  const result = await searchDomains(
+    { name: "vaishnavi", extensions: ["biz", "page", "neta"] },
+    { env, client }
+  );
+  assert.deepEqual(checked, ["biz"]);
+  assert.deepEqual(
+    result.body.results.map((item) => item.domain),
+    ["vaishnavi.biz"]
+  );
+  assert.equal(result.body.results[0].price.amount, 1805.3);
 });
 
 test("standard available TLDs are ordered before other available TLDs", async () => {
@@ -441,6 +579,8 @@ test("Openprovider IP access denial is mapped clearly", async () => {
   assert.equal(result.status, 502);
   assert.equal(result.body.error, "openprovider_access_denied");
   assert.equal(result.body.serverIp, "203.0.113.10");
+  assert.equal(result.body.upstreamCode, 10005);
+  assert.equal(result.body.upstreamDesc, "Access denied.");
 });
 
 test("missing Openprovider credentials return a configuration error name", async () => {

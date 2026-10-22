@@ -16,6 +16,7 @@ const { createSpeechesRouter } = require("./speeches");
 const { createLettersRouter } = require("./letters");
 const { createDomainsRouter } = require("./domains");
 const { createVrmRouter } = require("./routes/vrm");
+const { createSocialMediaRouter } = require("./routes/social_media");
 
 loadEnv();
 
@@ -79,6 +80,9 @@ app.get("/", (_req, res) => {
       "GET /api/health",
       "POST /api/auth/otp/send",
       "POST /api/auth/otp/verify",
+      "GET /api/auth/oauth/:provider/start",
+      "GET /api/auth/oauth/callback",
+      "POST /api/auth/oauth/exchange",
       "GET|PUT /api/profile",
       "GET|PUT /api/websites/me",
       "POST /api/websites/me/publish",
@@ -94,6 +98,7 @@ app.get("/", (_req, res) => {
       "GET /api/domains/diagnostics",
       "GET /api/vrm/records",
       "PATCH /api/vrm/records/:id/contacts",
+      "GET /api/social-media/contacts",
       "POST /api/vrm/import/preview-ocr",
       "POST /api/vrm/import/confirm",
     ],
@@ -116,6 +121,7 @@ app.use("/api/speeches", createSpeechesRouter());
 app.use("/api/letters", createLettersRouter());
 app.use("/api/domains", createDomainsRouter());
 app.use("/api/vrm", createVrmRouter());
+app.use("/api/social-media", createSocialMediaRouter());
 
 app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });

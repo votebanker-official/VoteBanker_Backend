@@ -16,7 +16,7 @@ const SPEECH_TYPES = [
   "Custom",
 ];
 
-const LANGUAGES = ["English", "Kannada", "Hindi", "Telugu", "Tamil", "Malayalam"];
+const LANGUAGES = ["Hindi", "Gujarati", "English", "Kannada", "Telugu", "Tamil", "Malayalam"];
 const DURATIONS = ["2 minutes", "5 minutes", "10 minutes", "15 minutes"];
 const TONES = ["Formal", "Inspirational", "Conversational", "Development-focused", "Community-focused"];
 

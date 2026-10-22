@@ -88,6 +88,9 @@ router.patch("/records/:id/contacts", requireUser, async (req, res, next) => {
     if (code === "not_found" || code === "invalid_record_id") {
       return res.status(404).json({ success: false, error: code });
     }
+    if (code === "invalid_contact") {
+      return res.status(400).json({ success: false, error: code, field: err.field || null });
+    }
     return next(err);
   }
 });

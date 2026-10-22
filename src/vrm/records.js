@@ -37,18 +37,153 @@ function mapRow(row) {
   };
 }
 
-function normalizeContactValue(raw, maxLen) {
-  if (raw == null) return null;
+const CONTACT_FIELDS = [
+  ["whatsappContact", "whatsapp_contact"],
+  ["instagramContact", "instagram_contact"],
+  ["facebookContact", "facebook_contact"],
+];
+
+const INSTAGRAM_HOSTS = new Set(["instagram.com", "www.instagram.com"]);
+const FACEBOOK_HOSTS = new Set([
+  "facebook.com",
+  "www.facebook.com",
+  "m.facebook.com",
+  "fb.com",
+  "www.fb.com",
+  "m.fb.com",
+]);
+
+function isHandleOrProfileUrl(value, hosts) {
+  if (/^https?:\/\//i.test(value)) {
+    let url;
+    try {
+      url = new URL(value);
+    } catch {
+      return false;
+    }
+    if (url.username || url.password) return false;
+    return hosts.has(url.hostname.toLowerCase());
+  }
+  if (/[\s/\\]/.test(value)) return false;
+  const handle = value.replace(/^@/, "");
+  return /^[A-Za-z0-9._]{1,50}$/.test(handle);
+}
+
+function validateContactColumn(column, raw) {
+  if (raw == null) return { ok: true, value: null };
   const value = String(raw).trim();
-  if (!value) return null;
-  return value.slice(0, maxLen);
+  if (!value) return { ok: true, value: null };
+  if (value.length > CONTACT_MAX[column]) return { ok: false };
+
+  if (column === "whatsapp_contact") {
+    if (!/^[0-9+\-().\s]+$/.test(value)) return { ok: false };
+    const digits = value.replace(/\D/g, "");
+    if (digits.length < 8 || digits.length > 15) return { ok: false };
+    return { ok: true, value };
+  }
+  if (column === "instagram_contact" && !isHandleOrProfileUrl(value, INSTAGRAM_HOSTS)) {
+    return { ok: false };
+  }
+  if (column === "facebook_contact" && !isHandleOrProfileUrl(value, FACEBOOK_HOSTS)) {
+    return { ok: false };
+  }
+  return { ok: true, value };
+}
+
+/**
+ * Only keys present on the request are updated. An empty string clears that field.
+ * Omitted keys keep the stored value.
+ */
+function buildContactPatch(contacts = {}) {
+  const source = contacts && typeof contacts === "object" ? contacts : {};
+  const patch = {};
+  for (const [camel, snake] of CONTACT_FIELDS) {
+    const hasCamel = Object.prototype.hasOwnProperty.call(source, camel);
+    const hasSnake = Object.prototype.hasOwnProperty.call(source, snake);
+    if (!hasCamel && !hasSnake) continue;
+    const result = validateContactColumn(snake, hasCamel ? source[camel] : source[snake]);
+    if (!result.ok) {
+      const err = new Error("invalid_contact");
+      err.code = "invalid_contact";
+      err.field = camel;
+      return { error: err, patch: null };
+    }
+    patch[snake] = result.value;
+  }
+  return { error: null, patch };
+}
+
+function groupSocialContacts(records, query = "") {
+  const needle = String(query || "").trim().toLowerCase();
+  const sections = {
+    whatsapp: [],
+    instagram: [],
+    facebook: [],
+  };
+  const seen = {
+    whatsapp: new Set(),
+    instagram: new Set(),
+    facebook: new Set(),
+  };
+
+  for (const row of records || []) {
+    const name = row && row.name ? String(row.name) : "";
+    const id = row && row.id ? String(row.id) : "";
+    if (!id || !name) continue;
+
+    const whatsapp = row.whatsappContact || null;
+    const instagram = row.instagramContact || null;
+    const facebook = row.facebookContact || null;
+    const epic = row.epicNumber || null;
+
+    if (whatsapp) {
+      const key = `${id}|${whatsapp}`;
+      const hay = `${name} ${whatsapp} ${epic || ""}`.toLowerCase();
+      if (!seen.whatsapp.has(key) && (!needle || hay.includes(needle))) {
+        seen.whatsapp.add(key);
+        sections.whatsapp.push({
+          id,
+          name,
+          epicNumber: epic,
+          whatsappContact: whatsapp,
+        });
+      }
+    }
+    if (instagram) {
+      const key = `${id}|${instagram}`;
+      const hay = `${name} ${instagram}`.toLowerCase();
+      if (!seen.instagram.has(key) && (!needle || hay.includes(needle))) {
+        seen.instagram.add(key);
+        sections.instagram.push({ id, name, instagramContact: instagram });
+      }
+    }
+    if (facebook) {
+      const key = `${id}|${facebook}`;
+      const hay = `${name} ${facebook}`.toLowerCase();
+      if (!seen.facebook.has(key) && (!needle || hay.includes(needle))) {
+        seen.facebook.add(key);
+        sections.facebook.push({ id, name, facebookContact: facebook });
+      }
+    }
+  }
+
+  return {
+    counts: {
+      whatsapp: sections.whatsapp.length,
+      instagram: sections.instagram.length,
+      facebook: sections.facebook.length,
+    },
+    whatsapp: sections.whatsapp,
+    instagram: sections.instagram,
+    facebook: sections.facebook,
+  };
 }
 
 /**
  * Update only WhatsApp / Instagram / Facebook on an authorized record.
  * Does not touch name, age, gender, EPIC, or other voter fields.
  */
-async function updateVoterContacts(userId, recordId, contacts = {}) {
+async function updateVoterContacts(userId, recordId, contacts = {}, options = {}) {
   if (!userId) {
     const err = new Error("unauthorized");
     err.code = "unauthorized";
@@ -60,10 +195,10 @@ async function updateVoterContacts(userId, recordId, contacts = {}) {
     throw err;
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = options.supabase || getSupabaseAdmin();
   const { data: existing, error: loadError } = await supabase
     .from("vrm_voter_records")
-    .select("id, owner_user_id, is_shared")
+    .select(LIST_COLUMNS)
     .eq("id", recordId)
     .maybeSingle();
 
@@ -87,20 +222,11 @@ async function updateVoterContacts(userId, recordId, contacts = {}) {
     throw err;
   }
 
-  const patch = {
-    whatsapp_contact: normalizeContactValue(
-      contacts.whatsappContact ?? contacts.whatsapp_contact,
-      CONTACT_MAX.whatsapp_contact
-    ),
-    instagram_contact: normalizeContactValue(
-      contacts.instagramContact ?? contacts.instagram_contact,
-      CONTACT_MAX.instagram_contact
-    ),
-    facebook_contact: normalizeContactValue(
-      contacts.facebookContact ?? contacts.facebook_contact,
-      CONTACT_MAX.facebook_contact
-    ),
-  };
+  const built = buildContactPatch(contacts);
+  if (built.error) throw built.error;
+  if (Object.keys(built.patch).length === 0) return mapRow(existing);
+
+  const patch = built.patch;
 
   const { data, error } = await supabase
     .from("vrm_voter_records")
@@ -322,6 +448,8 @@ async function importOneByOne(supabase, rows, batchId, skipped, skippedDuplicate
 }
 
 module.exports = {
+  buildContactPatch,
+  groupSocialContacts,
   importVoterRecords,
   listVoterRecords,
   mapRow,

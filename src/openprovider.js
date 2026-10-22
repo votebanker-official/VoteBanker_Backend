@@ -62,6 +62,19 @@ function mapUpstreamFailure(payload, fallback = "openprovider_check_failed") {
   return fallback;
 }
 
+function failFromPayload(payload, fallback) {
+  const error = new Error(mapUpstreamFailure(payload, fallback));
+  error.code = error.message;
+  if (payload && payload.code != null) {
+    error.upstreamCode = payload.code;
+  }
+  const desc = payload && typeof payload.desc === "string" ? payload.desc.trim() : "";
+  if (desc) {
+    error.upstreamDesc = desc.slice(0, 180);
+  }
+  return error;
+}
+
 function tokenExpiryMs(token, now = Date.now()) {
   try {
     const parts = String(token || "").split(".");
@@ -154,11 +167,7 @@ function createOpenproviderClient(options = {}) {
 
       const token = body && body.data && body.data.token;
       if (!response.ok || body.code !== 0 || !token) {
-        const code = mapUpstreamFailure(body, "openprovider_auth_failed");
-        const error = new Error(code);
-        error.code = code;
-        error.upstreamCode = body && body.code;
-        throw error;
+        throw failFromPayload(body, "openprovider_auth_failed");
       }
 
       cachedToken = String(token);
@@ -223,11 +232,7 @@ function createOpenproviderClient(options = {}) {
     });
 
     if (!response.ok || !payload || payload.code !== 0 || !payload.data) {
-      const code = mapUpstreamFailure(payload, "openprovider_check_failed");
-      const error = new Error(code);
-      error.code = code;
-      error.upstreamCode = payload && payload.code;
-      throw error;
+      throw failFromPayload(payload, "openprovider_check_failed");
     }
 
     const results = payload.data.results;
@@ -238,6 +243,19 @@ function createOpenproviderClient(options = {}) {
     }
 
     return results;
+  }
+
+  async function getDomainPrice({ name, extension, operation = "renew", period = 1 }) {
+    const params = new URLSearchParams();
+    params.set("domain.name", String(name || ""));
+    params.set("domain.extension", String(extension || ""));
+    params.set("operation", String(operation || "renew"));
+    params.set("period", String(period || 1));
+    const { response, payload } = await request(`/domains/prices?${params.toString()}`);
+    if (!response.ok || !payload || payload.code !== 0 || !payload.data) {
+      throw failFromPayload(payload, "openprovider_price_failed");
+    }
+    return payload.data;
   }
 
   let tldCache = null;
@@ -287,6 +305,7 @@ function createOpenproviderClient(options = {}) {
     clearToken,
     request,
     checkDomains,
+    getDomainPrice,
     listActiveTldNames,
     // Test helpers
     _getCachedTokenState: () => ({ token: cachedToken, expiresAt: tokenExpiresAt }),

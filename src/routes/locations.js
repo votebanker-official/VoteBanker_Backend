@@ -5,6 +5,7 @@ const {
   statesForCountry,
   districtsForState,
   assemblyConstituenciesForDistrict,
+  assemblyConstituenciesForNames,
   districtById,
 } = require("../locations");
 
@@ -26,7 +27,23 @@ router.get("/districts", (req, res) => {
   res.json({ data });
 });
 
+function sendAssemblyResult(res, result) {
+  if (result.error) {
+    return res.status(result.status).json({ error: result.error, data: [] });
+  }
+  return res.json({ data: result.data });
+}
+
 router.get("/assembly-constituencies", (req, res) => {
+  const stateName = req.query.state;
+  const districtName = req.query.district;
+  if (
+    (typeof stateName === "string" && stateName.trim()) ||
+    (typeof districtName === "string" && districtName.trim())
+  ) {
+    return sendAssemblyResult(res, assemblyConstituenciesForNames(stateName, districtName));
+  }
+
   const districtId = Number(req.query.district_id);
   const district = districtById.get(districtId);
   if (!Number.isInteger(districtId) || !district) {
@@ -39,8 +56,7 @@ router.get("/assembly-constituencies", (req, res) => {
   ) {
     return res.status(400).json({ error: "district_state_mismatch" });
   }
-  const result = assemblyConstituenciesForDistrict(districtId);
-  res.status(result.status).json({ error: result.error, data: [] });
+  return sendAssemblyResult(res, assemblyConstituenciesForDistrict(districtId));
 });
 
 module.exports = router;

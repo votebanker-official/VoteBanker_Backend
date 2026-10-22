@@ -13,5 +13,15 @@
     "url": "https://lgdirectory.gov.in/downloadDirectory.do",
     "report": "allDistrictofIndia"
   },
-  "assembly_constituencies": null
+  "assembly_constituencies": {
+    "name": "DataMeet India assembly constituency attributes, kept only where a current LGD district is unambiguous",
+    "file": "India_AC.dbf",
+    "dataset_date": "2014-11-24",
+    "imported": "2026-10-22",
+    "url": "https://github.com/datameet/maps",
+    "license": "CC-BY 2.5 IN",
+    "attributes": ["ST_NAME", "DIST_NAME", "AC_NO", "AC_NAME"],
+    "records": 2546,
+    "id_formula": "state_id * 1000 + constituency_number"
+  }
 }

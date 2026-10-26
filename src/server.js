@@ -85,6 +85,7 @@ app.get("/", (_req, res) => {
       "POST /api/auth/oauth/exchange",
       "GET|PUT /api/profile",
       "GET|PUT /api/websites/me",
+      "POST /api/websites/generate",
       "POST /api/websites/me/publish",
       "GET /api/location/countries",
       "GET /api/location/states",

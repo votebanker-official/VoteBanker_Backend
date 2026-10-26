@@ -1,8 +1,18 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 
 const { getSupabaseAdmin, getSupabasePublic } = require("../lib/clients");
+const { generateWebsite } = require("../website_ai");
 
 const router = express.Router();
+
+const generateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "rate_limited" },
+});
 
 const TEMPLATE_IDS = new Set([
   "professional",
@@ -149,6 +159,93 @@ function buildUpsert(body, userId, existing) {
     },
   };
 }
+
+router.post("/generate", generateLimiter, async (req, res, next) => {
+  try {
+    // Optional auth: signed-in users can later persist; guests may still generate.
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (token) {
+      try {
+        const { data } = await getSupabasePublic().auth.getUser(token);
+        if (data && data.user) {
+          req.user = data.user;
+        }
+      } catch {
+        // Ignore bad tokens for generation; ownership is enforced on save/publish.
+      }
+    }
+
+    const result = await generateWebsite(req.body, {
+      env: process.env,
+      fetchImpl: fetch,
+    });
+
+    if (
+      result.status >= 200 &&
+      result.status < 300 &&
+      result.body &&
+      result.body.success &&
+      req.user &&
+      result.body.document
+    ) {
+      try {
+        const admin = getSupabaseAdmin();
+        const { data: existing } = await admin
+          .from("websites")
+          .select("id, template_content, design_settings, website_name, template_id")
+          .eq("user_id", req.user.id)
+          .maybeSingle();
+        const templateContent = {
+          ...(existing && existing.template_content && typeof existing.template_content === "object"
+            ? existing.template_content
+            : {}),
+          generatedDocument: result.body.document,
+          generatedAt: new Date().toISOString(),
+          generatedSource: result.body.source || "ai",
+        };
+        const templateId =
+          result.body.document.templateId ||
+          (existing && existing.template_id) ||
+          "professional";
+        const persistRow = {
+          user_id: req.user.id,
+          template_id: normalizeTemplateId(templateId),
+          website_name:
+            (existing && existing.website_name) ||
+            result.body.document.siteTitle ||
+            "",
+          status: "draft",
+          template_content: templateContent,
+          design_settings: {
+            ...(existing && existing.design_settings && typeof existing.design_settings === "object"
+              ? existing.design_settings
+              : {}),
+            themeId: result.body.document.themeId,
+            designDirection: result.body.document.designDirection,
+          },
+          updated_at: new Date().toISOString(),
+        };
+        if (existing && existing.id) {
+          persistRow.id = existing.id;
+        } else {
+          persistRow.created_at = new Date().toISOString();
+        }
+        await admin.from("websites").upsert(persistRow, { onConflict: "user_id" });
+        result.body.persisted = true;
+      } catch (persistError) {
+        console.error(
+          `website generate persist skipped: ${persistError && persistError.message}`
+        );
+        result.body.persisted = false;
+      }
+    }
+
+    res.status(result.status).json(result.body);
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get("/me", requireUser, async (req, res, next) => {
   try {

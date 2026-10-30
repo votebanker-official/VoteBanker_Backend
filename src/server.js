@@ -18,6 +18,7 @@ const { createDomainsRouter } = require("./domains");
 const { createVrmRouter } = require("./routes/vrm");
 const { createSocialMediaRouter } = require("./routes/social_media");
 const { createVolunteersRouter } = require("./volunteers");
+const { createTeamMembersRouter } = require("./team_members");
 
 loadEnv();
 
@@ -115,6 +116,8 @@ app.get("/", (_req, res) => {
       "GET|POST /api/volunteers/applications",
       "POST /api/volunteers/applications/:id/review",
       "GET /api/volunteers/teams",
+      "GET|POST /api/team-members",
+      "GET|PATCH|DELETE /api/team-members/:id",
     ],
   });
 });
@@ -137,6 +140,7 @@ app.use("/api/domains", createDomainsRouter());
 app.use("/api/vrm", createVrmRouter());
 app.use("/api/social-media", createSocialMediaRouter());
 app.use("/api/volunteers", createVolunteersRouter());
+app.use("/api/team-members", createTeamMembersRouter());
 
 app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });
@@ -148,6 +152,24 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "server_error" });
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`VOTE BANKER backend listening on port ${port}`);
 });
+
+server.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(
+      `Port ${port} is already in use. Another process is listening on ${port}. Stop that process, then run npm run dev again.`,
+    );
+    process.exit(1);
+  }
+  console.error(error.message);
+  process.exit(1);
+});
+
+function closeServer() {
+  server.close(() => process.exit(0));
+}
+
+process.once("SIGINT", closeServer);
+process.once("SIGTERM", closeServer);

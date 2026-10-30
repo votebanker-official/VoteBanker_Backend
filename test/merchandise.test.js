@@ -49,3 +49,26 @@ test("a blank print line is rejected", () => {
   });
   assert.equal(result.error, "invalid_line");
 });
+
+test("an optional print photo is kept as base64", () => {
+  const result = validateOrder({
+    product_slug: "t-shirt",
+    campaign_line: "Vote with pride",
+    quantity: 1,
+    contact_name: "Meera Rao",
+    campaign_photo: "data:image/png;base64,aGVsbG8=",
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.value.campaign_photo, "aGVsbG8=");
+});
+
+test("an invalid print photo is rejected", () => {
+  const result = validateOrder({
+    product_slug: "t-shirt",
+    campaign_line: "Vote with pride",
+    quantity: 1,
+    contact_name: "Meera Rao",
+    campaign_photo: "not-base64!!!",
+  });
+  assert.equal(result.error, "invalid_photo");
+});

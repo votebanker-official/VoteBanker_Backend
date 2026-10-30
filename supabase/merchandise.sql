@@ -19,6 +19,7 @@ create table if not exists public.merchandise_orders (
   product_slug text not null,
   product_name text not null,
   campaign_line text not null,
+  campaign_photo text not null default '',
   size text not null default '',
   color text not null default '',
   quantity integer not null check (quantity between 1 and 500),
@@ -28,6 +29,9 @@ create table if not exists public.merchandise_orders (
   status text not null default 'requested',
   created_at timestamptz not null default now()
 );
+
+alter table public.merchandise_orders
+  add column if not exists campaign_photo text not null default '';
 
 create index if not exists merchandise_orders_profile_created_idx
   on public.merchandise_orders (profile_id, created_at desc);

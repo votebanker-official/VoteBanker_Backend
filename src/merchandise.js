@@ -67,11 +67,26 @@ function validateOrder(body) {
     return { error: "invalid_phone" };
   }
 
+  // Optional print photo as base64 (or data-URL). Cap keeps order rows reasonable.
+  let campaignPhoto = String(source.campaign_photo || "").trim();
+  if (campaignPhoto) {
+    const marker = "base64,";
+    const markerAt = campaignPhoto.indexOf(marker);
+    if (markerAt >= 0) {
+      campaignPhoto = campaignPhoto.slice(markerAt + marker.length);
+    }
+    if (!/^[A-Za-z0-9+/=\s]+$/.test(campaignPhoto) || campaignPhoto.length > 900000) {
+      return { error: "invalid_photo" };
+    }
+    campaignPhoto = campaignPhoto.replace(/\s+/g, "");
+  }
+
   return {
     value: {
       product_slug: item.slug,
       product_name: item.name,
       campaign_line: campaignLine,
+      campaign_photo: campaignPhoto,
       size,
       color,
       quantity,
@@ -188,7 +203,7 @@ async function readOrders(fetchImpl, supabaseUrl, secretKey, userId) {
     fetchImpl,
     supabaseUrl,
     secretKey,
-    `/rest/v1/merchandise_orders?select=id,product_name,campaign_line,size,color,quantity,status,created_at&profile_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
+    `/rest/v1/merchandise_orders?select=id,product_name,campaign_line,campaign_photo,size,color,quantity,status,created_at&profile_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
   );
   if (!response.ok) {
     return { ok: false, orders: [] };

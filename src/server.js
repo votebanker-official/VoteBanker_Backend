@@ -17,6 +17,7 @@ const { createLettersRouter } = require("./letters");
 const { createDomainsRouter } = require("./domains");
 const { createVrmRouter } = require("./routes/vrm");
 const { createSocialMediaRouter } = require("./routes/social_media");
+const { createVolunteersRouter } = require("./volunteers");
 
 loadEnv();
 
@@ -102,6 +103,15 @@ app.get("/", (_req, res) => {
       "GET /api/social-media/contacts",
       "POST /api/vrm/import/preview-ocr",
       "POST /api/vrm/import/confirm",
+      "GET /api/volunteers/stats",
+      "GET /api/volunteers/overview",
+      "GET|POST /api/volunteers/volunteers",
+      "GET|PATCH|DELETE /api/volunteers/volunteers/:id",
+      "GET|POST /api/volunteers/tasks",
+      "PATCH /api/volunteers/tasks/:id",
+      "GET|POST /api/volunteers/applications",
+      "POST /api/volunteers/applications/:id/review",
+      "GET /api/volunteers/teams",
     ],
   });
 });
@@ -123,6 +133,7 @@ app.use("/api/letters", createLettersRouter());
 app.use("/api/domains", createDomainsRouter());
 app.use("/api/vrm", createVrmRouter());
 app.use("/api/social-media", createSocialMediaRouter());
+app.use("/api/volunteers", createVolunteersRouter());
 
 app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });

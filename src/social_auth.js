@@ -1,11 +1,23 @@
 const crypto = require("crypto");
 
-const PROVIDERS = new Set(["facebook", "instagram"]);
+const LOGIN_PROVIDERS = new Set(["facebook", "instagram"]);
+const CONNECT_PROVIDERS = new Set([
+  "facebook",
+  "instagram",
+  "whatsapp",
+  "x",
+  "youtube",
+  "email",
+]);
 const TICKET_TTL_MS = 2 * 60 * 1000;
 const STATE_TTL_MS = 10 * 60 * 1000;
 
 function isProvider(value) {
-  return PROVIDERS.has(value);
+  return LOGIN_PROVIDERS.has(value);
+}
+
+function isConnectProvider(value) {
+  return CONNECT_PROVIDERS.has(value);
 }
 
 function appCredentials(provider, env = process.env) {
@@ -48,10 +60,16 @@ function readState(token, secret, now = Date.now()) {
   } catch {
     return null;
   }
-  if (!payload || typeof payload.exp !== "number" || payload.exp < now || !isProvider(payload.provider)) {
+  if (!payload || typeof payload.exp !== "number" || payload.exp < now) return null;
+  if (typeof payload.returnTo !== "string") return null;
+  const purpose = payload.purpose === "connect" ? "connect" : "login";
+  if (purpose === "connect") {
+    if (!isConnectProvider(payload.provider)) return null;
+    if (typeof payload.userId !== "string" || !payload.userId) return null;
+  } else if (!isProvider(payload.provider)) {
     return null;
   }
-  if (typeof payload.returnTo !== "string") return null;
+  payload.purpose = purpose;
   return payload;
 }
 
@@ -220,7 +238,10 @@ async function exchangeInstagramCode({ code, redirectUri, clientId, clientSecret
 
 module.exports = {
   STATE_TTL_MS,
+  LOGIN_PROVIDERS,
+  CONNECT_PROVIDERS,
   isProvider,
+  isConnectProvider,
   appCredentials,
   providerConfigured,
   signState,

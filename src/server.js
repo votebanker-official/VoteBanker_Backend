@@ -17,6 +17,7 @@ const { createLettersRouter } = require("./letters");
 const { createDomainsRouter } = require("./domains");
 const { createVrmRouter } = require("./routes/vrm");
 const { createSocialMediaRouter } = require("./routes/social_media");
+const { createSocialConnectionsRouter } = require("./routes/social_connections");
 const { createVolunteersRouter } = require("./volunteers");
 const { createTeamMembersRouter } = require("./team_members");
 
@@ -101,6 +102,9 @@ app.get("/", (_req, res) => {
       "GET /api/domains/diagnostics",
       "GET /api/vrm/records",
       "PATCH /api/vrm/records/:id/contacts",
+      "GET /api/social-connections",
+      "POST /api/social-connections/:provider/start",
+      "DELETE /api/social-connections/:provider",
       "GET /api/social-media/contacts",
       "GET /api/social-media/integrations",
       "POST /api/social-media/posts",
@@ -138,6 +142,7 @@ app.use("/api/speeches", createSpeechesRouter());
 app.use("/api/letters", createLettersRouter());
 app.use("/api/domains", createDomainsRouter());
 app.use("/api/vrm", createVrmRouter());
+app.use("/api/social-connections", createSocialConnectionsRouter());
 app.use("/api/social-media", createSocialMediaRouter());
 app.use("/api/volunteers", createVolunteersRouter());
 app.use("/api/team-members", createTeamMembersRouter());

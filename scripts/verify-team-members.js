@@ -55,8 +55,9 @@ async function main() {
       headers,
       body: JSON.stringify({
         fullName: marker,
-        mobile,
-        email: "verify@example.com",
+        whatsappNumber: mobile,
+        facebookUrl: "https://facebook.com/verify",
+        instagramUrl: "https://instagram.com/verify",
         designation: "Check",
         location: "Lab",
         role: "Member",
@@ -65,6 +66,9 @@ async function main() {
     });
     const createdBody = await created.json();
     if (!created.ok) throw new Error(`create_${created.status}_${createdBody.error || "failed"}`);
+    if (createdBody.member.whatsappNumber !== mobile) throw new Error("whatsapp_not_saved");
+    if (createdBody.member.facebookUrl !== "https://facebook.com/verify") throw new Error("facebook_not_saved");
+    if (createdBody.member.instagramUrl !== "https://instagram.com/verify") throw new Error("instagram_not_saved");
     const listed = await fetch(base, { headers });
     const listedBody = await listed.json();
     const found = (listedBody.members || []).some((row) => row.id === createdBody.member.id);
@@ -76,8 +80,9 @@ async function main() {
       headers,
       body: JSON.stringify({
         fullName: marker,
-        mobile,
-        email: "verify@example.com",
+        whatsappNumber: mobile,
+        facebookUrl: "https://facebook.com/verify",
+        instagramUrl: "https://instagram.com/verify",
         designation: "Check",
         location: "Lab",
         role: "Member",

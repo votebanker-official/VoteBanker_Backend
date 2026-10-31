@@ -21,8 +21,9 @@ test("team member validation rejects a bad phone and unknown role", () => {
   );
   const parsed = validateMemberInput({
     fullName: "Asha Rao",
-    mobile: "9876543210",
-    email: "asha@example.com",
+    whatsappNumber: "9876543210",
+    facebookUrl: "facebook.com/asha",
+    instagramUrl: "https://www.instagram.com/asha",
     designation: "Booth lead",
     location: "Bengaluru",
     role: "Field Lead",
@@ -31,6 +32,31 @@ test("team member validation rejects a bad phone and unknown role", () => {
   }, { creating: true });
   assert.equal(parsed.error, undefined);
   assert.equal(parsed.value.status, "pending");
+  assert.equal(parsed.value.whatsappNumber, "9876543210");
+  assert.equal(parsed.value.mobile, "9876543210");
+  assert.equal(parsed.value.facebookUrl, "https://facebook.com/asha");
+  assert.equal(parsed.value.instagramUrl, "https://www.instagram.com/asha");
+  assert.equal(parsed.value.email, undefined);
+  assert.equal(
+    validateMemberInput({
+      fullName: "Asha",
+      whatsappNumber: "9876543210",
+      facebookUrl: "https://evil.example/asha",
+      role: "Member",
+      permissions: [],
+    }).error,
+    "invalid_facebook_url",
+  );
+  assert.equal(
+    validateMemberInput({
+      fullName: "Asha",
+      mobile: "9876543210",
+      instagramUrl: "not a profile",
+      role: "Member",
+      permissions: [],
+    }).error,
+    "invalid_instagram_url",
+  );
 });
 
 test("team member CRUD updates counts from stored records", async () => {
@@ -72,8 +98,9 @@ test("team member CRUD updates counts from stored records", async () => {
       headers,
       body: JSON.stringify({
         fullName: "Meera Nair",
-        mobile: "9876543210",
-        email: "meera@example.com",
+        whatsappNumber: "9876543210",
+        facebookUrl: "https://facebook.com/meera",
+        instagramUrl: "https://instagram.com/meera",
         designation: "Coordinator",
         location: "Kochi",
         role: "Coordinator",
@@ -83,6 +110,9 @@ test("team member CRUD updates counts from stored records", async () => {
     const createdBody = await created.json();
     assert.equal(created.status, 201);
     assert.equal(createdBody.member.status, "pending");
+    assert.equal(createdBody.member.whatsappNumber, "9876543210");
+    assert.equal(createdBody.member.facebookUrl, "https://facebook.com/meera");
+    assert.equal(createdBody.member.instagramUrl, "https://instagram.com/meera");
     assert.equal(createdBody.stats.total, 1);
     assert.equal(createdBody.stats.pending, 1);
     assert.equal(createdBody.stats.active, 0);
@@ -92,8 +122,9 @@ test("team member CRUD updates counts from stored records", async () => {
       headers,
       body: JSON.stringify({
         fullName: "Meera Nair",
-        mobile: "9876543210",
-        email: "meera@example.com",
+        whatsappNumber: "9876543210",
+        facebookUrl: "https://facebook.com/meera",
+        instagramUrl: "https://instagram.com/meera",
         designation: "Coordinator",
         location: "Kochi",
         role: "Coordinator",

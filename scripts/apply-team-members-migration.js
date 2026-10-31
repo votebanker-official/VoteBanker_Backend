@@ -8,15 +8,20 @@ loadEnv();
 
 async function main() {
   const { Client } = require("pg");
-  const sqlPath = path.join(__dirname, "..", "supabase", "migrations", "20261030160000_team_members.sql");
-  const sql = fs.readFileSync(sqlPath, "utf8");
+  const dir = path.join(__dirname, "..", "supabase", "migrations");
+  const files = fs
+    .readdirSync(dir)
+    .filter((name) => name.includes("team_member") && name.endsWith(".sql"))
+    .sort();
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
   });
   await client.connect();
   try {
-    await client.query(sql);
+    for (const name of files) {
+      await client.query(fs.readFileSync(path.join(dir, name), "utf8"));
+    }
     const check = await client.query("select to_regclass('public.team_members') as table_name");
     const name = check.rows[0] && check.rows[0].table_name;
     if (name !== "team_members") {

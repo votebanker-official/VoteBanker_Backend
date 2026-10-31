@@ -71,6 +71,24 @@ function createTeamMembersRouter(options = {}) {
     try {
       const all = await listMembers(fetchImpl, supabaseUrl, secretKey, userId, memory);
       const members = filterMembers(all, req.query);
+      // #region agent log
+      fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f11656" },
+        body: JSON.stringify({
+          sessionId: "f11656",
+          location: "team_members.js:GET",
+          message: "listed team social fields",
+          data: {
+            count: all.length,
+            withFacebook: all.filter((row) => row.facebookUrl).length,
+            withInstagram: all.filter((row) => row.instagramUrl).length,
+          },
+          timestamp: Date.now(),
+          hypothesisId: "A",
+        }),
+      }).catch(() => {});
+      // #endregion
       res.json({ success: true, members, stats: statsFor(all) });
     } catch (err) {
       console.error(err.message);
@@ -110,6 +128,25 @@ function createTeamMembersRouter(options = {}) {
       res.status(400).json({ error: parsed.error });
       return;
     }
+    // #region agent log
+    fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f11656" },
+      body: JSON.stringify({
+        sessionId: "f11656",
+        location: "team_members.js:POST",
+        message: "saving team social fields",
+        data: {
+          hasFacebook: Boolean(parsed.value.facebookUrl),
+          hasInstagram: Boolean(parsed.value.instagramUrl),
+          facebookLen: String(parsed.value.facebookUrl || "").length,
+          instagramLen: String(parsed.value.instagramUrl || "").length,
+        },
+        timestamp: Date.now(),
+        hypothesisId: "D",
+      }),
+    }).catch(() => {});
+    // #endregion
     try {
       const existing = await listMembers(fetchImpl, supabaseUrl, secretKey, userId, memory);
       if (existing.some((row) => row.mobile === parsed.value.mobile)) {
@@ -190,11 +227,23 @@ function createTeamMembersRouter(options = {}) {
   return router;
 }
 
+const FACEBOOK_HOSTS = new Set([
+  "facebook.com",
+  "www.facebook.com",
+  "m.facebook.com",
+  "fb.com",
+  "www.fb.com",
+  "m.fb.com",
+]);
+
+const INSTAGRAM_HOSTS = new Set(["instagram.com", "www.instagram.com"]);
+
 function validateMemberInput(source, options = {}) {
   const body = source && typeof source === "object" ? source : {};
   const fullName = String(body.fullName || "").trim();
-  const mobile = String(body.mobile || "").trim();
-  const email = String(body.email || "").trim();
+  const whatsappNumber = String(body.whatsappNumber || body.mobile || "").trim();
+  const facebookUrl = normalizeProfileUrl(body.facebookUrl);
+  const instagramUrl = normalizeProfileUrl(body.instagramUrl);
   const designation = String(body.designation || "").trim();
   const location = String(body.location || "").trim();
   const role = String(body.role || "").trim();
@@ -202,8 +251,9 @@ function validateMemberInput(source, options = {}) {
   const status = options.creating ? "pending" : String(body.status || "pending").trim().toLowerCase();
 
   if (!fullName || fullName.length > 120) return { error: "invalid_name" };
-  if (!isValidPhone(mobile)) return { error: "invalid_phone" };
-  if (email && !isValidEmail(email)) return { error: "invalid_email" };
+  if (!isValidPhone(whatsappNumber)) return { error: "invalid_phone" };
+  if (!isProfileUrl(facebookUrl, FACEBOOK_HOSTS)) return { error: "invalid_facebook_url" };
+  if (!isProfileUrl(instagramUrl, INSTAGRAM_HOSTS)) return { error: "invalid_instagram_url" };
   if (designation.length > 80) return { error: "invalid_designation" };
   if (location.length > 120) return { error: "invalid_location" };
   if (!ROLES.includes(role)) return { error: "invalid_role" };
@@ -213,8 +263,10 @@ function validateMemberInput(source, options = {}) {
   return {
     value: {
       fullName,
-      mobile,
-      email: email || null,
+      mobile: whatsappNumber,
+      whatsappNumber,
+      facebookUrl: facebookUrl || null,
+      instagramUrl: instagramUrl || null,
       designation: designation || null,
       location: location || null,
       role,
@@ -244,8 +296,25 @@ function isValidPhone(value) {
   return /^\+?[0-9][0-9\s-]{6,18}$/.test(String(value || "").trim());
 }
 
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim()) && String(value).length <= 160;
+function normalizeProfileUrl(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (/^https?:\/\//i.test(text)) return text;
+  return `https://${text}`;
+}
+
+function isProfileUrl(value, hosts) {
+  if (!value) return true;
+  if (value.length > 300) return false;
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  if (url.username || url.password) return false;
+  return hosts.has(url.hostname.toLowerCase());
 }
 
 function statsFor(members) {
@@ -265,7 +334,17 @@ function filterMembers(members, query) {
     if (status && STATUSES.includes(status) && row.status !== status) return false;
     if (role && row.role !== role) return false;
     if (!q) return true;
-    const blob = [row.fullName, row.mobile, row.email, row.designation, row.role, row.location]
+    const blob = [
+      row.fullName,
+      row.mobile,
+      row.whatsappNumber,
+      row.facebookUrl,
+      row.instagramUrl,
+      row.email,
+      row.designation,
+      row.role,
+      row.location,
+    ]
       .join(" ")
       .toLowerCase();
     return blob.includes(q);
@@ -297,7 +376,10 @@ function mapMember(row) {
     id: row.id,
     fullName: row.full_name,
     mobile: row.mobile,
+    whatsappNumber: row.mobile,
     email: row.email || "",
+    facebookUrl: row.facebook_url || "",
+    instagramUrl: row.instagram_url || "",
     designation: row.designation || "",
     location: row.location || "",
     role: row.role,
@@ -316,7 +398,7 @@ async function listMembers(fetchImpl, supabaseUrl, secretKey, userId, memory) {
       .map(mapMember);
   }
   const path =
-    `/rest/v1/team_members?select=id,full_name,mobile,email,designation,location,role,permissions,status,created_at,updated_at` +
+    `/rest/v1/team_members?select=id,full_name,mobile,email,facebook_url,instagram_url,designation,location,role,permissions,status,created_at,updated_at` +
     `&owner_user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`;
   const response = await supabaseFetch(fetchImpl, supabaseUrl, secretKey, path);
   if (!response.ok) throw new Error("team_members_load_failed");
@@ -337,7 +419,8 @@ async function insertMember(fetchImpl, supabaseUrl, secretKey, userId, value, me
       owner_user_id: userId,
       full_name: value.fullName,
       mobile: value.mobile,
-      email: value.email,
+      facebook_url: value.facebookUrl,
+      instagram_url: value.instagramUrl,
       designation: value.designation,
       location: value.location,
       role: value.role,
@@ -356,7 +439,8 @@ async function insertMember(fetchImpl, supabaseUrl, secretKey, userId, value, me
       owner_user_id: userId,
       full_name: value.fullName,
       mobile: value.mobile,
-      email: value.email,
+      facebook_url: value.facebookUrl,
+      instagram_url: value.instagramUrl,
       designation: value.designation,
       location: value.location,
       role: value.role,
@@ -376,7 +460,8 @@ async function updateMember(fetchImpl, supabaseUrl, secretKey, userId, id, value
     if (!row) return null;
     row.full_name = value.fullName;
     row.mobile = value.mobile;
-    row.email = value.email;
+    row.facebook_url = value.facebookUrl;
+    row.instagram_url = value.instagramUrl;
     row.designation = value.designation;
     row.location = value.location;
     row.role = value.role;
@@ -396,7 +481,8 @@ async function updateMember(fetchImpl, supabaseUrl, secretKey, userId, id, value
       body: {
         full_name: value.fullName,
         mobile: value.mobile,
-        email: value.email,
+        facebook_url: value.facebookUrl,
+        instagram_url: value.instagramUrl,
         designation: value.designation,
         location: value.location,
         role: value.role,

@@ -155,6 +155,33 @@ router.get("/oauth/callback", async (req, res, next) => {
     return res.status(400).json({ error: "social_expired" });
   }
   try {
+    if (state.purpose === "connect") {
+      const { finishConnect, saveConnection } = require("../routes/social_connections");
+      if (req.query.error) {
+        const status = req.query.error === "access_denied" ? "cancelled" : "failed";
+        return res.redirect(
+          `${returnTo}?social_status=${status}&provider=${encodeURIComponent(state.provider)}`
+        );
+      }
+      try {
+        const account = await finishConnect({
+          state,
+          code: req.query.code,
+          redirectUri: callbackUrl(req),
+          save: saveConnection,
+        });
+        const name = encodeURIComponent(account.accountName || account.accountUsername || "");
+        return res.redirect(
+          `${returnTo}?social_status=connected&provider=${encodeURIComponent(state.provider)}&account=${name}`
+        );
+      } catch (err) {
+        const status = encodeURIComponent(err.code || "failed");
+        console.error(`social connect failed: ${err.code || err.message}`);
+        return res.redirect(
+          `${returnTo}?social_status=${status}&provider=${encodeURIComponent(state.provider)}`
+        );
+      }
+    }
     if (req.query.error) {
       const code = req.query.error === "access_denied" ? "social_denied" : "social_failed";
       return redirectWithError(res, returnTo, code);

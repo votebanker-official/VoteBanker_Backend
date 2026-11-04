@@ -10,6 +10,7 @@ const {
   createTicketStore,
   exchangeFacebookCode,
   exchangeInstagramCode,
+  exchangeGoogleCode,
 } = require("../src/social_auth");
 
 const secret = "test-secret";
@@ -54,6 +55,14 @@ test("authorize urls carry the app id and not the secret", () => {
   assert.match(instagram, /instagram\.com\/oauth\/authorize/);
   assert.match(instagram, /client_id=ig-app/);
   assert.match(instagram, /enable_fb_login=0/);
+
+  const google = authorizeUrl("google", {
+    clientId: "google-app",
+    redirectUri: "https://api.example/api/auth/oauth/callback",
+    state: "signed",
+  });
+  assert.match(google, /accounts\.google\.com\/o\/oauth2\/v2\/auth/);
+  assert.match(google, /client_id=google-app/);
 });
 
 test("provider configuration requires both id and secret", () => {
@@ -124,6 +133,36 @@ test("instagram code exchange accepts the data array shape", async () => {
     clientId: "id",
     clientSecret: "secret",
     fetchImpl,
+  });
+
+  test("google code exchange keeps the provider user id", async () => {
+    const calls = [];
+    const fetchImpl = async (url) => {
+      calls.push(String(url));
+      if (String(url).includes("oauth2.googleapis.com/token")) {
+        return { ok: true, async text() { return JSON.stringify({ access_token: "tok" }); } };
+      }
+      return {
+        ok: true,
+        async text() {
+          return JSON.stringify({ sub: "google-123", name: "Leader", email: "leader@example.com" });
+        },
+      };
+    };
+    const profile = await exchangeGoogleCode({
+      code: "abc",
+      redirectUri: "https://api.example/cb",
+      clientId: "id",
+      clientSecret: "secret",
+      fetchImpl,
+    });
+    assert.deepEqual(profile, {
+      provider: "google",
+      providerUserId: "google-123",
+      name: "Leader",
+      email: "leader@example.com",
+    });
+    assert.equal(calls.length, 2);
   });
   assert.equal(profile.provider, "instagram");
   assert.equal(profile.providerUserId, "4455");

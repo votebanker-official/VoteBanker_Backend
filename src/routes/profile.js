@@ -12,6 +12,10 @@ const COLUMNS =
   "country_code, state_id, district_id, assembly_constituency_id, " +
   "state_region, constituency, public_contact, website_template, social_channels, " +
   "vrm_requested, booth_number, booth_name, profile_photo_path, created_at, updated_at";
+const PROFILE_COLUMNS = COLUMNS.replace(
+  "created_at, updated_at",
+  "additional_profile, created_at, updated_at",
+);
 
 // request field -> [column, max length]. Only these can be written by a client.
 const TEXT_FIELDS = {
@@ -67,6 +71,13 @@ function buildProfileUpdate(body, user) {
       .slice(0, 20);
   }
   if (typeof source.vrm_requested === "boolean") update.vrm_requested = source.vrm_requested;
+  if (
+    source.additional_profile &&
+    typeof source.additional_profile === "object" &&
+    !Array.isArray(source.additional_profile)
+  ) {
+    update.additional_profile = source.additional_profile;
+  }
 
   const location = validateLocationIds({
     countryCode: source.country_code,
@@ -115,7 +126,7 @@ router.get("/", requireUser, async (req, res, next) => {
   try {
     const { data, error } = await getSupabaseAdmin()
       .from("profiles")
-      .select(COLUMNS)
+      .select(PROFILE_COLUMNS)
       .eq("id", req.user.id)
       .maybeSingle();
     if (error) throw error;
@@ -133,7 +144,7 @@ router.put("/", requireUser, async (req, res, next) => {
     const { data, error } = await getSupabaseAdmin()
       .from("profiles")
       .upsert(built.update, { onConflict: "id" })
-      .select(COLUMNS)
+      .select(PROFILE_COLUMNS)
       .single();
     if (error) throw error;
     res.json({ profile: withPhotoUrl(data, process.env.SUPABASE_URL) });

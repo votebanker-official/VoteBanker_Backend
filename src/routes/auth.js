@@ -16,6 +16,7 @@ const {
   createTicketStore,
   exchangeFacebookCode,
   exchangeInstagramCode,
+  exchangeGoogleCode,
 } = require("../social_auth");
 
 const router = express.Router();
@@ -187,7 +188,12 @@ router.get("/oauth/callback", async (req, res, next) => {
       return redirectWithError(res, returnTo, code);
     }
     const creds = appCredentials(state.provider);
-    const exchange = state.provider === "facebook" ? exchangeFacebookCode : exchangeInstagramCode;
+    const exchange =
+      state.provider === "facebook"
+        ? exchangeFacebookCode
+        : state.provider === "google"
+          ? exchangeGoogleCode
+          : exchangeInstagramCode;
     const profile = await exchange({
       code: req.query.code,
       redirectUri: callbackUrl(req),
@@ -200,6 +206,8 @@ router.get("/oauth/callback", async (req, res, next) => {
       refresh_token: session.refresh_token,
       expires_at: session.expires_at,
       user_id: user.id,
+      full_name: profile.name || "",
+      email: profile.email || "",
     });
     res.redirect(`${returnTo}?auth_ticket=${encodeURIComponent(ticket)}`);
   } catch (err) {
@@ -220,7 +228,12 @@ router.post("/oauth/exchange", otpLimiter, (req, res) => {
     access_token: session.access_token,
     refresh_token: session.refresh_token,
     expires_at: session.expires_at,
-    user: { id: session.user_id, phone: "" },
+    user: {
+      id: session.user_id,
+      phone: "",
+      full_name: session.full_name || "",
+      email: session.email || "",
+    },
   });
 });
 

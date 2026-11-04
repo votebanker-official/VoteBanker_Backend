@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const LOGIN_PROVIDERS = new Set(["facebook", "instagram"]);
+const LOGIN_PROVIDERS = new Set(["facebook", "instagram", "google"]);
 const CONNECT_PROVIDERS = new Set([
   "facebook",
   "instagram",
@@ -29,6 +29,9 @@ function appCredentials(provider, env = process.env) {
       id: env.INSTAGRAM_APP_ID || env.META_APP_ID || "",
       secret: env.INSTAGRAM_APP_SECRET || env.META_APP_SECRET || "",
     };
+  }
+  if (provider === "google") {
+    return { id: env.GOOGLE_CLIENT_ID || "", secret: env.GOOGLE_CLIENT_SECRET || "" };
   }
   return { id: "", secret: "" };
 }
@@ -115,6 +118,16 @@ function authorizeUrl(provider, { clientId, redirectUri, state }) {
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", "public_profile,email");
+    return url.toString();
+  }
+  if (provider === "google") {
+    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("state", state);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", "openid email profile");
+    url.searchParams.set("access_type", "offline");
     return url.toString();
   }
   const url = new URL("https://www.instagram.com/oauth/authorize");
@@ -218,6 +231,7 @@ async function exchangeInstagramCode({ code, redirectUri, clientId, clientSecret
     error.code = "provider_rejected";
     throw error;
   }
+
   let name = "";
   try {
     const profileUrl = new URL("https://graph.instagram.com/v21.0/me");
@@ -233,6 +247,48 @@ async function exchangeInstagramCode({ code, redirectUri, clientId, clientSecret
     providerUserId: String(userId),
     name,
     email: "",
+  };
+}
+
+async function exchangeGoogleCode({ code, redirectUri, clientId, clientSecret, fetchImpl }) {
+  const form = new URLSearchParams();
+  form.set("client_id", clientId);
+  form.set("client_secret", clientSecret);
+  form.set("code", cleanAuthCode(code));
+  form.set("grant_type", "authorization_code");
+  form.set("redirect_uri", redirectUri);
+  const token = await fetchJson(
+    "https://oauth2.googleapis.com/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form.toString(),
+    },
+    fetchImpl
+  );
+  if (!token.access_token) {
+    const error = new Error("provider_rejected");
+    error.code = "provider_rejected";
+    throw error;
+  }
+  const profile = await fetchJson(
+    "https://openidconnect.googleapis.com/v1/userinfo",
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token.access_token}` },
+    },
+    fetchImpl
+  );
+  if (!profile.sub) {
+    const error = new Error("provider_rejected");
+    error.code = "provider_rejected";
+    throw error;
+  }
+  return {
+    provider: "google",
+    providerUserId: String(profile.sub),
+    name: profile.name || "",
+    email: profile.email || "",
   };
 }
 
@@ -252,4 +308,5 @@ module.exports = {
   createTicketStore,
   exchangeFacebookCode,
   exchangeInstagramCode,
+  exchangeGoogleCode,
 };

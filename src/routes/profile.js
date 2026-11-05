@@ -6,6 +6,35 @@ const { validateLocationIds } = require("../locations");
 const router = express.Router();
 
 const PHOTO_BUCKET = "profile-photos";
+const demoProfiles = new Map();
+
+async function demoAccount(phone) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
+    return demoProfiles.get(phone) || null;
+  }
+  const { data, error } = await getSupabaseAdmin()
+    .from("demo_accounts")
+    .select("phone, profile, last_route")
+    .eq("phone", `+${phone.replace("+", "")}`)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function saveDemoAccount(phone, profile, lastRoute) {
+  const normalized = `+${phone.replace("+", "")}`;
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
+    demoProfiles.set(normalized, { profile, last_route: lastRoute });
+    return;
+  }
+  const { error } = await getSupabaseAdmin()
+    .from("demo_accounts")
+    .upsert(
+      { phone: normalized, profile, last_route: lastRoute },
+      { onConflict: "phone" }
+    );
+  if (error) throw error;
+}
 
 const COLUMNS =
   "id, full_name, phone, selected_domain, language, designation, organization, country, " +
@@ -41,6 +70,13 @@ async function requireUser(req, res, next) {
     const header = req.headers.authorization || "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : null;
     if (!token) return res.status(401).json({ error: "unauthorized" });
+    if (process.env.OTP_PROVIDER === "demo" && token.startsWith("demo-")) {
+      req.user = {
+        id: token.slice("demo-".length),
+        phone: `+${token.slice("demo-".length)}`,
+      };
+      return next();
+    }
 
     const { data, error } = await getSupabasePublic().auth.getUser(token);
     if (error || !data.user) return res.status(401).json({ error: "unauthorized" });
@@ -124,6 +160,13 @@ function withPhotoUrl(profile, supabaseUrl) {
 
 router.get("/", requireUser, async (req, res, next) => {
   try {
+    if (process.env.OTP_PROVIDER === "demo") {
+      const account = await demoAccount(req.user.phone);
+      return res.json({
+        profile: account && account.profile ? account.profile : null,
+        last_route: account?.last_route || "/profile",
+      });
+    }
     const { data, error } = await getSupabaseAdmin()
       .from("profiles")
       .select(PROFILE_COLUMNS)
@@ -138,6 +181,19 @@ router.get("/", requireUser, async (req, res, next) => {
 
 router.put("/", requireUser, async (req, res, next) => {
   try {
+    if (process.env.OTP_PROVIDER === "demo") {
+      const built = buildProfileUpdate(req.body, req.user);
+      if (built.error) return res.status(built.status).json({ error: built.error });
+      const account = await demoAccount(req.user.phone);
+      const current = account?.profile || {};
+      const profile = { ...current, ...built.update, id: req.user.id };
+      const lastRoute =
+        typeof req.body.last_route === "string" && req.body.last_route.startsWith("/")
+          ? req.body.last_route
+          : account?.last_route || "/profile";
+      await saveDemoAccount(req.user.phone, profile, lastRoute);
+      return res.json({ profile });
+    }
     const built = buildProfileUpdate(req.body, req.user);
     if (built.error) return res.status(built.status).json({ error: built.error });
 

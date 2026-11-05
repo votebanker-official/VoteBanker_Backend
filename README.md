@@ -40,7 +40,7 @@ You need to be invited to the Railway project first. Ask the project owner. Neve
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/health` | Liveness check |
-| POST | `/api/auth/otp/send` | `{ "phone": "+91...", "channel": "sms" }` |
+| POST | `/api/auth/otp/send` | `{ "phone": "+91...", "channel": "whatsapp" }` |
 | POST | `/api/auth/otp/verify` | `{ "phone": "+91...", "code": "123456" }` returns `access_token`, `refresh_token` |
 | GET / PUT | `/api/profile` | `Authorization: Bearer <access_token>`. PUT saves onboarding answers |
 | GET / PUT | `/api/websites/me` | Authenticated website builder draft (template, profile, content, design). PUT upserts the signed-in user's draft |
@@ -64,7 +64,8 @@ Payment verification for website publishing is not wired to a gateway yet. Until
 ## Known limits / next steps
 
 - **Twilio is a trial account**: OTPs only reach numbers added under Twilio Console -> Phone Numbers -> **Verified Caller IDs**. Upgrade the account for real users.
-- **WhatsApp OTP is off** (`WHATSAPP_OTP_ENABLED=false`): the Verify service has no WhatsApp sender, so Twilio would silently send SMS. Register a WhatsApp sender, link it to the Verify service, then set the variable to `true`.
+- **WhatsApp OTP setup:** configure a WhatsApp sender in Twilio, link it to the `VoteBanker` Verify service, set `WHATSAPP_OTP_ENABLED=true`, and restart the backend. The backend rejects SMS requests; it never falls back to SMS.
+- **Client demo mode:** set `OTP_PROVIDER=demo`, choose a private `DEMO_OTP`, and list only approved demo numbers in `DEMO_PHONE_NUMBERS`. This bypasses Twilio and must not be used for real authentication.
 - Email sign-in is not built yet.
 - Profile photo is not saved yet (needs Supabase Storage).
 - Rotate any credentials that were ever shared in chat before going live.

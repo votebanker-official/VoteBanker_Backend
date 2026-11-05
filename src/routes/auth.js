@@ -39,6 +39,42 @@ function normalizePhone(input) {
   return E164.test(phone) ? phone : null;
 }
 
+function demoPhoneNumbers() {
+  return new Set(
+    String(process.env.DEMO_PHONE_NUMBERS || "")
+      .split(",")
+      .map(normalizePhone)
+      .filter(Boolean)
+  );
+}
+
+function isDemoOtpEnabled() {
+  return process.env.OTP_PROVIDER === "demo";
+}
+
+function demoOtpConfigured(phone) {
+  return Boolean(process.env.DEMO_OTP) &&
+    (demoPhoneNumbers().size === 0 || demoPhoneNumbers().has(phone));
+}
+
+function demoSessionFor(phone) {
+  return {
+    access_token: `demo-${phone.replace("+", "")}`,
+    refresh_token: `demo-refresh-${phone.replace("+", "")}`,
+    expires_at: null,
+    user_id: `demo-${phone.replace("+", "")}`,
+  };
+}
+
+async function ensureDemoAccount(phone) {
+  const { getSupabaseAdmin } = require("../lib/clients");
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) return;
+  const { error } = await getSupabaseAdmin()
+    .from("demo_accounts")
+    .upsert({ phone }, { onConflict: "phone", ignoreDuplicates: true });
+  if (error) throw error;
+}
+
 // Supabase users are created with a phone-derived email + a password only the
 // server can compute. This lets the server mint a normal Supabase session after
 // Twilio has verified the phone number.
@@ -242,13 +278,19 @@ router.post("/otp/send", otpLimiter, async (req, res, next) => {
     const phone = normalizePhone(req.body && req.body.phone);
     if (!phone) return res.status(400).json({ error: "invalid_phone" });
 
-    const requested = req.body && req.body.channel;
-    const channel = requested === "whatsapp" ? "whatsapp" : "sms";
+    const channel = req.body && req.body.channel;
+    if (channel !== "whatsapp") {
+      return res.status(400).json({ error: "whatsapp_only" });
+    }
 
-    // Without a WhatsApp sender on the Twilio Verify service, Twilio silently
-    // falls back to SMS. Keep WhatsApp off until it is set up, then set
-    // WHATSAPP_OTP_ENABLED=true.
-    if (channel === "whatsapp" && process.env.WHATSAPP_OTP_ENABLED !== "true") {
+    if (isDemoOtpEnabled()) {
+      if (!demoOtpConfigured(phone)) {
+        return res.status(403).json({ error: "demo_number_not_allowed" });
+      }
+      return res.json({ status: "sent", channel, provider: "demo" });
+    }
+
+    if (process.env.WHATSAPP_OTP_ENABLED !== "true") {
       return res.status(400).json({ error: "channel_unavailable" });
     }
 
@@ -260,7 +302,7 @@ router.post("/otp/send", otpLimiter, async (req, res, next) => {
     if (err.code === 21608 || /verified tester|unverified/i.test(err.message || "")) {
       return res.status(403).json({ error: "number_not_verified" });
     }
-    // WhatsApp must be enabled on the Twilio Verify service; fall back guidance for the app.
+    // WhatsApp must be enabled on the Twilio Verify service.
     if (req.body && req.body.channel === "whatsapp" && (err.status === 400 || err.status === 404)) {
       console.error(`WhatsApp channel unavailable: ${err.code} ${err.message}`);
       return res.status(400).json({ error: "channel_unavailable" });
@@ -279,9 +321,24 @@ router.post("/otp/verify", otpLimiter, async (req, res, next) => {
       return res.status(400).json({ error: "invalid_code" });
     }
 
-    const check = await verifyService().verificationChecks.create({ to: phone, code });
-    if (check.status !== "approved") {
-      return res.status(401).json({ error: "incorrect_code" });
+    if (isDemoOtpEnabled()) {
+      if (!demoOtpConfigured(phone)) {
+        return res.status(403).json({ error: "demo_number_not_allowed" });
+      }
+      if (code !== process.env.DEMO_OTP) {
+        return res.status(401).json({ error: "incorrect_code" });
+      }
+      await ensureDemoAccount(phone);
+      const demoSession = demoSessionFor(phone);
+      return res.json({
+        ...demoSession,
+        user: { id: demoSession.user_id, phone },
+      });
+    } else {
+      const check = await verifyService().verificationChecks.create({ to: phone, code });
+      if (check.status !== "approved") {
+        return res.status(401).json({ error: "incorrect_code" });
+      }
     }
 
     const { session, user } = await signInOrCreate(phone);

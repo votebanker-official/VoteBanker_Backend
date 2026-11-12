@@ -1,5 +1,4 @@
 require("dotenv").config();
-
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -134,6 +133,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.get("/auth/callback", authRoutes.oauthCallback);
 app.use("/api/profile", profileRoutes);
 app.use("/api/websites", websiteRoutes);
 app.use("/api/location", locationRoutes);

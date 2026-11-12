@@ -155,6 +155,23 @@ async function signInOrCreateSocial(profile) {
   return data;
 }
 
+async function saveSocialDisplayName(userId, name) {
+  const fullName = String(name || "").trim().slice(0, 120);
+  if (!userId || !fullName) return;
+  const admin = getSupabaseAdmin();
+  const existing = await admin
+    .from("profiles")
+    .select("full_name")
+    .eq("id", userId)
+    .maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data && String(existing.data.full_name || "").trim()) return;
+  const { error } = await admin
+    .from("profiles")
+    .upsert({ id: userId, full_name: fullName }, { onConflict: "id" });
+  if (error) throw error;
+}
+
 const socialTickets = createTicketStore();
 
 function redirectWithError(res, returnTo, code) {
@@ -171,7 +188,31 @@ router.get("/oauth/:provider/start", (req, res) => {
     return redirectWithError(res, returnTo, "social_not_configured");
   }
 
-  const { id } = appCredentials(provider);
+  const creds = appCredentials(provider);
+  const redirectUri = callbackUrl(req, process.env, provider);
+  // #region agent log
+  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1102e" },
+    body: JSON.stringify({
+      sessionId: "b1102e",
+      runId: "pre-fix",
+      hypothesisId: "A",
+      location: "auth.js:oauth/start",
+      message: "oauth start redirect",
+      data: {
+        provider,
+        redirectUri,
+        returnTo,
+        host: req.get("host") || "",
+        idSet: Boolean(creds.id),
+        secretSet: Boolean(creds.secret),
+        secretEqualsId: Boolean(creds.id && creds.secret && creds.id === creds.secret),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   const state = signState(
     {
       provider,
@@ -181,13 +222,37 @@ router.get("/oauth/:provider/start", (req, res) => {
     },
     required("SUPABASE_SECRET_KEY")
   );
-  res.redirect(authorizeUrl(provider, { clientId: id, redirectUri: callbackUrl(req), state }));
+  res.redirect(authorizeUrl(provider, { clientId: creds.id, redirectUri, state }));
 });
 
-router.get("/oauth/callback", async (req, res, next) => {
+async function oauthCallback(req, res, next) {
   const secret = process.env.SUPABASE_SECRET_KEY || "";
   const state = readState(req.query.state, secret);
   const returnTo = state && state.returnTo;
+  // #region agent log
+  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1102e" },
+    body: JSON.stringify({
+      sessionId: "b1102e",
+      runId: "pre-fix",
+      hypothesisId: "D",
+      location: "auth.js:oauth/callback",
+      message: "oauth callback hit",
+      data: {
+        path: req.path,
+        host: req.get("host") || "",
+        provider: state && state.provider ? state.provider : "",
+        hasCode: typeof req.query.code === "string" && req.query.code.length > 0,
+        hasState: Boolean(state),
+        returnTo: returnTo || "",
+        providerError: typeof req.query.error === "string" ? req.query.error : "",
+        redirectUri: state ? callbackUrl(req, process.env, state.provider) : "",
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   if (!returnTo) {
     return res.status(400).json({ error: "social_expired" });
   }
@@ -204,7 +269,7 @@ router.get("/oauth/callback", async (req, res, next) => {
         const account = await finishConnect({
           state,
           code: req.query.code,
-          redirectUri: callbackUrl(req),
+          redirectUri: callbackUrl(req, process.env, state.provider),
           save: saveConnection,
         });
         const name = encodeURIComponent(account.accountName || account.accountUsername || "");
@@ -232,11 +297,16 @@ router.get("/oauth/callback", async (req, res, next) => {
           : exchangeInstagramCode;
     const profile = await exchange({
       code: req.query.code,
-      redirectUri: callbackUrl(req),
+      redirectUri: callbackUrl(req, process.env, state.provider),
       clientId: creds.id,
       clientSecret: creds.secret,
     });
     const { session, user } = await signInOrCreateSocial(profile);
+    try {
+      await saveSocialDisplayName(user.id, profile.name);
+    } catch (err) {
+      console.error(`profile name save failed: ${err.message || err}`);
+    }
     const ticket = socialTickets.issue({
       access_token: session.access_token,
       refresh_token: session.refresh_token,
@@ -245,13 +315,50 @@ router.get("/oauth/callback", async (req, res, next) => {
       full_name: profile.name || "",
       email: profile.email || "",
     });
+    // #region agent log
+    fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1102e" },
+      body: JSON.stringify({
+        sessionId: "b1102e",
+        runId: "pre-fix",
+        hypothesisId: "C",
+        location: "auth.js:oauth/callback",
+        message: "oauth profile exchanged",
+        data: {
+          provider: profile.provider,
+          hasProviderUserId: Boolean(profile.providerUserId),
+          returnTo,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     res.redirect(`${returnTo}?auth_ticket=${encodeURIComponent(ticket)}`);
   } catch (err) {
+    // #region agent log
+    fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1102e" },
+      body: JSON.stringify({
+        sessionId: "b1102e",
+        runId: "pre-fix",
+        hypothesisId: "C",
+        location: "auth.js:oauth/callback",
+        message: "oauth callback failed",
+        data: { code: err.code || "", name: err.name || "" },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     console.error(`social sign-in failed: ${err.code || err.message}`);
     if (returnTo) return redirectWithError(res, returnTo, "social_failed");
     next(err);
   }
-});
+}
+
+router.get("/oauth/callback", oauthCallback);
+router.get("/callback", oauthCallback);
 
 router.post("/oauth/exchange", otpLimiter, (req, res) => {
   const ticket = req.body && req.body.ticket;
@@ -274,6 +381,27 @@ router.post("/oauth/exchange", otpLimiter, (req, res) => {
 });
 
 router.post("/otp/send", otpLimiter, async (req, res, next) => {
+  // #region agent log
+  try {
+    require("fs").appendFileSync(
+      "c:\\Users\\HP\\Desktop\\Vote Banker\\.cursor\\debug-f6f27c.log",
+      `${JSON.stringify({
+        sessionId: "f6f27c",
+        runId: "pre-fix",
+        hypothesisId: "B",
+        location: "auth.js:otp/send",
+        message: "otp send reached backend",
+        data: {
+          channel: req.body && req.body.channel,
+          whatsappEnabled: process.env.WHATSAPP_OTP_ENABLED === "true",
+          otpProvider: process.env.OTP_PROVIDER || "unset",
+          origin: req.get("origin") || "",
+        },
+        timestamp: Date.now(),
+      })}\n`
+    );
+  } catch (_) {}
+  // #endregion
   try {
     const phone = normalizePhone(req.body && req.body.phone);
     if (!phone) return res.status(400).json({ error: "invalid_phone" });
@@ -357,3 +485,4 @@ router.post("/otp/verify", otpLimiter, async (req, res, next) => {
 });
 
 module.exports = router;
+module.exports.oauthCallback = oauthCallback;

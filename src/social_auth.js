@@ -101,10 +101,19 @@ function safeReturnTo(input, env = process.env) {
   const local = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(url.origin);
   const allowed = allowedOrigins(env);
   if (!local && !allowed.has(url.origin)) return null;
-  return `${url.origin}/`;
+  const path = url.pathname === "/auth/callback" || url.pathname === "/profile" ? url.pathname : "/";
+  return `${url.origin}${path}`;
 }
 
-function callbackUrl(req, env = process.env) {
+function callbackUrl(req, env = process.env, provider) {
+  if (provider === "google" || provider === "youtube" || provider === "email") {
+    const googleRedirect = String(env.GOOGLE_REDIRECT_URI || "").trim();
+    if (googleRedirect) return googleRedirect;
+    const host = req && typeof req.get === "function" ? String(req.get("host") || "") : "";
+    if (/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host)) {
+      return "http://localhost:3000/auth/callback";
+    }
+  }
   const configured = String(env.PUBLIC_API_URL || "").trim().replace(/\/$/, "");
   if (configured) return `${configured}/api/auth/oauth/callback`;
   return `${req.protocol}://${req.get("host")}/api/auth/oauth/callback`;
@@ -284,10 +293,11 @@ async function exchangeGoogleCode({ code, redirectUri, clientId, clientSecret, f
     error.code = "provider_rejected";
     throw error;
   }
+  const given = [profile.given_name, profile.family_name].filter(Boolean).join(" ").trim();
   return {
     provider: "google",
     providerUserId: String(profile.sub),
-    name: profile.name || "",
+    name: String(profile.name || given || "").trim(),
     email: profile.email || "",
   };
 }

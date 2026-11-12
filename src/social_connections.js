@@ -425,7 +425,7 @@ function startConnect({ provider, userId, returnTo, req, env = process.env }) {
   );
   return connectAuthorizeUrl(provider, {
     clientId: creds.id,
-    redirectUri: callbackUrl(req, env),
+    redirectUri: callbackUrl(req, env, provider),
     state,
     env,
     codeChallenge: pkce ? pkce.challenge : "",

@@ -33,6 +33,10 @@ test("return targets stay on allowed origins", () => {
     "https://votebanker-frontend.vercel.app/"
   );
   assert.equal(safeReturnTo("http://localhost:55945/otp", env), "http://localhost:55945/");
+  assert.equal(
+    safeReturnTo("http://localhost:63026/profile?auth_ticket=abc", env),
+    "http://localhost:63026/profile"
+  );
   assert.equal(safeReturnTo("https://evil.example/phish", env), null);
   assert.equal(safeReturnTo("javascript:alert(1)", env), null);
 });

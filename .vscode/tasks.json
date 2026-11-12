@@ -1,0 +1,33 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "VoteBanker Backend",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "VoteBanker Backend Local",
+			"type": "shell",
+			"command": "cd '/Users/abhishekjadhav/Desktop/VOTE BANKER/VoteBanker/VoteBanker_Backend-main' && PORT=5001 npm run dev",
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "VoteBanker Frontend Local",
+			"type": "shell",
+			"command": "cd '/Users/abhishekjadhav/Desktop/VOTE BANKER/VoteBanker/VoteBanker_Frontend-main' && flutter run -d chrome --web-port 8090 --dart-define=API_BASE_URL=http://127.0.0.1:5001",
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

@@ -5,6 +5,7 @@ const {
   signState,
   readState,
   safeReturnTo,
+  callbackUrl,
   authorizeUrl,
   providerConfigured,
   createTicketStore,
@@ -33,8 +34,44 @@ test("return targets stay on allowed origins", () => {
     "https://votebanker-frontend.vercel.app/"
   );
   assert.equal(safeReturnTo("http://localhost:55945/otp", env), "http://localhost:55945/");
+  assert.equal(
+    safeReturnTo("http://localhost:59816/profile", env),
+    "http://localhost:59816/profile"
+  );
+  assert.equal(
+    safeReturnTo("http://localhost:59816/profile?auth_ticket=abc", env),
+    "http://localhost:59816/profile"
+  );
   assert.equal(safeReturnTo("https://evil.example/phish", env), null);
   assert.equal(safeReturnTo("javascript:alert(1)", env), null);
+});
+
+test("production VoteBanker frontend origin is allowed by default", () => {
+  assert.equal(
+    safeReturnTo("https://votebanker-frontend.vercel.app/", {}),
+    "https://votebanker-frontend.vercel.app/"
+  );
+  assert.equal(safeReturnTo("https://unknown.example/", {}), null);
+});
+
+test("OAuth callback uses the configured backend origin", () => {
+  const req = { protocol: "https", get: () => "attacker.example" };
+  assert.equal(
+    callbackUrl(req, { PUBLIC_API_URL: "https://api.votebanker.example" }),
+    "https://api.votebanker.example/api/auth/oauth/callback"
+  );
+  assert.equal(
+    callbackUrl(req, { PUBLIC_API_URL: "http://127.0.0.1:5000" }),
+    "http://127.0.0.1:5000/api/auth/oauth/callback"
+  );
+  assert.throws(
+    () => callbackUrl(req, {}),
+    (error) => error.code === "oauth_callback_not_configured"
+  );
+  assert.throws(
+    () => callbackUrl(req, { PUBLIC_API_URL: "http://api.example" }),
+    (error) => error.code === "oauth_callback_invalid"
+  );
 });
 
 test("authorize urls carry the app id and not the secret", () => {
@@ -44,8 +81,18 @@ test("authorize urls carry the app id and not the secret", () => {
     state: "signed",
   });
   assert.match(facebook, /client_id=fb-app/);
-  assert.match(facebook, /facebook\.com/);
+  assert.match(facebook, /facebook\.com\/v27\.0\/dialog\/oauth/);
+  assert.match(facebook, /scope=public_profile/);
   assert.doesNotMatch(facebook, /secret/);
+
+  const business = authorizeUrl("facebook", {
+    clientId: "fb-app",
+    redirectUri: "https://api.example/api/auth/oauth/callback",
+    state: "signed",
+    configId: "1143928571662392",
+  });
+  assert.match(business, /config_id=1143928571662392/);
+  assert.doesNotMatch(business, /scope=/);
 
   const instagram = authorizeUrl("instagram", {
     clientId: "ig-app",
@@ -113,6 +160,31 @@ test("facebook code exchange keeps the provider user id", async () => {
     email: "leader@example.com",
   });
   assert.equal(calls.length, 2);
+  assert.match(calls[0], /graph\.facebook\.com\/v27\.0\/oauth\/access_token/);
+  assert.match(calls[1], /graph\.facebook\.com\/v27\.0\/me/);
+  assert.match(calls[1], /first_name/);
+});
+
+test("facebook name falls back to first and last name", async () => {
+  const fetchImpl = async (url) => {
+    if (String(url).includes("oauth/access_token")) {
+      return { ok: true, async text() { return JSON.stringify({ access_token: "tok" }); } };
+    }
+    return {
+      ok: true,
+      async text() {
+        return JSON.stringify({ id: "9988", first_name: "Asha", last_name: "Patel" });
+      },
+    };
+  };
+  const profile = await exchangeFacebookCode({
+    code: "abc",
+    redirectUri: "https://api.example/cb",
+    clientId: "id",
+    clientSecret: "secret",
+    fetchImpl,
+  });
+  assert.equal(profile.name, "Asha Patel");
 });
 
 test("instagram code exchange accepts the data array shape", async () => {

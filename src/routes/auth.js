@@ -155,10 +155,35 @@ async function signInOrCreateSocial(profile) {
   return data;
 }
 
+// Keeps the Facebook (or other social) name on the leader profile when the
+// leader has not typed one yet. A name they already saved is left alone.
+async function rememberLeaderName(userId, name) {
+  const fullName = String(name || "").trim().slice(0, 120);
+  if (!fullName || !process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) return;
+  const admin = getSupabaseAdmin();
+  const existing = await admin.from("profiles").select("full_name").eq("id", userId).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data && String(existing.data.full_name || "").trim()) return;
+  const { error } = await admin
+    .from("profiles")
+    .upsert({ id: userId, full_name: fullName }, { onConflict: "id" });
+  if (error) throw error;
+}
+
 const socialTickets = createTicketStore();
 
 function redirectWithError(res, returnTo, code) {
   res.redirect(`${returnTo}?auth_error=${encodeURIComponent(code)}`);
+}
+
+// Facebook must land on the leader profile even when the browser returned
+// the site root. The query string is added by the caller.
+function profileReturnTo(returnTo) {
+  const url = new URL(returnTo);
+  url.pathname = "/profile";
+  url.search = "";
+  url.hash = "";
+  return `${url.origin}/profile`;
 }
 
 router.get("/oauth/:provider/start", (req, res) => {
@@ -168,6 +193,14 @@ router.get("/oauth/:provider/start", (req, res) => {
   const returnTo = safeReturnTo(req.query.return_to);
   if (!returnTo) return res.status(400).json({ error: "invalid_return" });
   if (!providerConfigured(provider)) {
+    return redirectWithError(res, returnTo, "social_not_configured");
+  }
+
+  let redirectUri;
+  try {
+    redirectUri = callbackUrl(req);
+  } catch (err) {
+    console.error(`social callback configuration failed: ${err.code || err.message}`);
     return redirectWithError(res, returnTo, "social_not_configured");
   }
 
@@ -181,7 +214,8 @@ router.get("/oauth/:provider/start", (req, res) => {
     },
     required("SUPABASE_SECRET_KEY")
   );
-  res.redirect(authorizeUrl(provider, { clientId: id, redirectUri: callbackUrl(req), state }));
+  const configId = String(process.env.META_LOGIN_CONFIG_ID || "").trim();
+  res.redirect(authorizeUrl(provider, { clientId: id, redirectUri, state, configId }));
 });
 
 router.get("/oauth/callback", async (req, res, next) => {
@@ -237,6 +271,11 @@ router.get("/oauth/callback", async (req, res, next) => {
       clientSecret: creds.secret,
     });
     const { session, user } = await signInOrCreateSocial(profile);
+    try {
+      await rememberLeaderName(user.id, profile.name);
+    } catch (err) {
+      console.error(`leader name was not saved: ${err.code || err.message}`);
+    }
     const ticket = socialTickets.issue({
       access_token: session.access_token,
       refresh_token: session.refresh_token,
@@ -245,7 +284,9 @@ router.get("/oauth/callback", async (req, res, next) => {
       full_name: profile.name || "",
       email: profile.email || "",
     });
-    res.redirect(`${returnTo}?auth_ticket=${encodeURIComponent(ticket)}`);
+    const destination = `${profileReturnTo(returnTo)}?auth_ticket=${encodeURIComponent(ticket)}`;
+    console.log(`social sign-in redirect provider=${profile.provider} path=/profile`);
+    res.redirect(destination);
   } catch (err) {
     console.error(`social sign-in failed: ${err.code || err.message}`);
     if (returnTo) return redirectWithError(res, returnTo, "social_failed");

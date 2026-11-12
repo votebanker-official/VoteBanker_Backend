@@ -26,7 +26,7 @@ loadEnv();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Railway sits behind a proxy; needed for correct client IPs in rate limiting.
+// The backend runs behind one trusted reverse proxy in production.
 app.set("trust proxy", 1);
 
 app.use(helmet());
@@ -54,7 +54,7 @@ function isAllowedOrigin(origin) {
   if (allowedOrigins.includes(origin)) {
     return true;
   }
-  // Flutter web / Chrome local debugging against Railway.
+  // Flutter web / Chrome local debugging against a remote API.
   if (isLocalDevOrigin(origin)) {
     return true;
   }

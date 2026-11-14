@@ -979,15 +979,9 @@ async function createVolunteer(fetchImpl, supabaseUrl, secretKey, userId, value,
   });
   if (!response.ok) {
     const codeName = response.body && response.body.code;
-    // #region agent log
-    fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'89cc1e'},body:JSON.stringify({sessionId:'89cc1e',hypothesisId:'H3',location:'volunteers.js:createVolunteer',message:'insert failed',data:{status:response.status,code:codeName||null,runId:'post-fix'},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (codeName === "23505") return { error: "duplicate_mobile", status: 409 };
     return { error: "save_failed", status: 502 };
   }
-  // #region agent log
-  fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'89cc1e'},body:JSON.stringify({sessionId:'89cc1e',hypothesisId:'H3',location:'volunteers.js:createVolunteer',message:'insert succeeded',data:{status:response.status,runId:'post-fix'},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   const row = Array.isArray(response.body) ? response.body[0] : response.body;
   const teams = await listTeams(fetchImpl, supabaseUrl, secretKey, userId, null);
   const teamsById = Object.fromEntries(teams.map((team) => [team.id, team]));

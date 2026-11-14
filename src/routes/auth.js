@@ -27,12 +27,14 @@ const E164 = /^\+[1-9]\d{7,14}$/;
 const CODE = /^\d{4,10}$/;
 
 // Tight limits on OTP endpoints to protect SMS spend and brute force.
+// Demo mode skips Twilio, so the limiter only gets in the way of local testing.
 const otpLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "too_many_requests" },
+  skip: () => process.env.OTP_PROVIDER === "demo",
 });
 
 function normalizePhone(input) {
@@ -71,10 +73,29 @@ function demoSessionFor(phone) {
 async function ensureDemoAccount(phone) {
   const { getSupabaseAdmin } = require("../lib/clients");
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) return;
-  const { error } = await getSupabaseAdmin()
-    .from("demo_accounts")
-    .upsert({ phone }, { onConflict: "phone", ignoreDuplicates: true });
-  if (error) throw error;
+  try {
+    const { error } = await getSupabaseAdmin()
+      .from("demo_accounts")
+      .upsert({ phone }, { onConflict: "phone", ignoreDuplicates: true });
+    if (error) throw error;
+  } catch (err) {
+    // Demo login must still succeed when Supabase is unreachable.
+    console.error(`demo account ensure failed: ${err.code || err.message}`);
+  }
+}
+
+// Local demo Facebook / Google when Meta/Google keys are not configured.
+function demoSocialSession(provider) {
+  const id = provider === "facebook" ? "900000000001" : "900000000002";
+  const label = provider === "facebook" ? "Facebook" : "Google";
+  return {
+    access_token: `demo-${id}`,
+    refresh_token: `demo-refresh-${id}`,
+    expires_at: null,
+    user_id: `demo-${id}`,
+    full_name: `${label} Demo Leader`,
+    email: `${provider}.demo@votebanker.local`,
+  };
 }
 
 // Supabase users are created with a phone-derived email + a password only the
@@ -273,6 +294,15 @@ router.get("/oauth/:provider/start", (req, res) => {
   const returnTo = safeReturnTo(req.query.return_to);
   if (!returnTo) return res.status(400).json({ error: "invalid_return" });
   if (!providerConfigured(provider)) {
+    // Same demo path as WhatsApp OTP: local sign-in without Meta/Google apps.
+    if (isDemoOtpEnabled() && (provider === "facebook" || provider === "google")) {
+      const session = demoSocialSession(provider);
+      void ensureDemoAccount(`+${session.user_id.replace(/^demo-/, "")}`);
+      const ticket = socialTickets.issue(session);
+      const destination = `${profileReturnTo(returnTo)}?auth_ticket=${encodeURIComponent(ticket)}`;
+      console.log(`demo social sign-in provider=${provider} path=/profile`);
+      return res.redirect(destination);
+    }
     return redirectWithError(res, returnTo, "social_not_configured");
   }
 

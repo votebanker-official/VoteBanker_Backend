@@ -33,24 +33,6 @@ function createTeamMembersRouter(options = {}) {
     const header = req.headers.authorization || "";
     const auth = await userIdFromAuth(fetchImpl, supabaseUrl, publishableKey, header);
     if (!auth.userId) {
-      // #region agent log
-      try {
-        require("node:fs").appendFileSync(
-          "c:\\Users\\HP\\Desktop\\Vote Banker\\.cursor\\debug-afb56a.log",
-          `${JSON.stringify({
-            sessionId: "afb56a",
-            location: "team_members.js",
-            message: "team auth rejected",
-            data: {
-              hasHeader: header.startsWith("Bearer ") && header.trim().length > "Bearer ".length,
-              upstreamStatus: auth.upstreamStatus,
-            },
-            timestamp: Date.now(),
-            hypothesisId: "B",
-          })}\n`,
-        );
-      } catch (_) {}
-      // #endregion
       res.status(401).json({ error: "unauthorized" });
       return null;
     }
@@ -71,24 +53,6 @@ function createTeamMembersRouter(options = {}) {
     try {
       const all = await listMembers(fetchImpl, supabaseUrl, secretKey, userId, memory);
       const members = filterMembers(all, req.query);
-      // #region agent log
-      fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f11656" },
-        body: JSON.stringify({
-          sessionId: "f11656",
-          location: "team_members.js:GET",
-          message: "listed team social fields",
-          data: {
-            count: all.length,
-            withFacebook: all.filter((row) => row.facebookUrl).length,
-            withInstagram: all.filter((row) => row.instagramUrl).length,
-          },
-          timestamp: Date.now(),
-          hypothesisId: "A",
-        }),
-      }).catch(() => {});
-      // #endregion
       res.json({ success: true, members, stats: statsFor(all) });
     } catch (err) {
       console.error(err.message);
@@ -128,25 +92,6 @@ function createTeamMembersRouter(options = {}) {
       res.status(400).json({ error: parsed.error });
       return;
     }
-    // #region agent log
-    fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f11656" },
-      body: JSON.stringify({
-        sessionId: "f11656",
-        location: "team_members.js:POST",
-        message: "saving team social fields",
-        data: {
-          hasFacebook: Boolean(parsed.value.facebookUrl),
-          hasInstagram: Boolean(parsed.value.instagramUrl),
-          facebookLen: String(parsed.value.facebookUrl || "").length,
-          instagramLen: String(parsed.value.instagramUrl || "").length,
-        },
-        timestamp: Date.now(),
-        hypothesisId: "D",
-      }),
-    }).catch(() => {});
-    // #endregion
     try {
       const existing = await listMembers(fetchImpl, supabaseUrl, secretKey, userId, memory);
       if (existing.some((row) => row.mobile === parsed.value.mobile)) {

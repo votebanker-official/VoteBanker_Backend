@@ -9,31 +9,41 @@ const PHOTO_BUCKET = "profile-photos";
 const demoProfiles = new Map();
 
 async function demoAccount(phone) {
+  const normalized = `+${String(phone || "").replace("+", "")}`;
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
-    return demoProfiles.get(phone) || null;
+    return demoProfiles.get(normalized) || null;
   }
-  const { data, error } = await getSupabaseAdmin()
-    .from("demo_accounts")
-    .select("phone, profile, last_route")
-    .eq("phone", `+${phone.replace("+", "")}`)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await getSupabaseAdmin()
+      .from("demo_accounts")
+      .select("phone, profile, last_route")
+      .eq("phone", normalized)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+  } catch (err) {
+    console.error(`demo account load failed: ${err.code || err.message}`);
+  }
+  return demoProfiles.get(normalized) || null;
 }
 
 async function saveDemoAccount(phone, profile, lastRoute) {
-  const normalized = `+${phone.replace("+", "")}`;
+  const normalized = `+${String(phone || "").replace("+", "")}`;
+  demoProfiles.set(normalized, { profile, last_route: lastRoute });
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
-    demoProfiles.set(normalized, { profile, last_route: lastRoute });
     return;
   }
-  const { error } = await getSupabaseAdmin()
-    .from("demo_accounts")
-    .upsert(
-      { phone: normalized, profile, last_route: lastRoute },
-      { onConflict: "phone" }
-    );
-  if (error) throw error;
+  try {
+    const { error } = await getSupabaseAdmin()
+      .from("demo_accounts")
+      .upsert(
+        { phone: normalized, profile, last_route: lastRoute },
+        { onConflict: "phone" }
+      );
+    if (error) throw error;
+  } catch (err) {
+    console.error(`demo account save failed: ${err.code || err.message}`);
+  }
 }
 
 const COLUMNS =

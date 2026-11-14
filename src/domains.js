@@ -569,7 +569,7 @@ async function searchDomains(body, options = {}) {
         body.serverIp = egressIp;
       }
       body.hint =
-        "Clear Openprovider API whitelist AND blacklist completely (leave both empty). Do not paste a single Railway IP.";
+        "Clear Openprovider API whitelist AND blacklist completely (leave both empty). Server egress IPs can change between hosts.";
     }
     return { status, body };
   }

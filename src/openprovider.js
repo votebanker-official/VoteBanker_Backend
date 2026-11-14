@@ -19,8 +19,8 @@ function readConfig(env = process.env) {
   const baseUrl = String(env.OPENPROVIDER_BASE_URL || DEFAULT_BASE_URL)
     .trim()
     .replace(/\/+$/, "");
-  // Always 0.0.0.0 for login. Setting a home/office IP here breaks Railway:
-  // the token becomes bound to that IP while requests leave from Railway's IP.
+  // Avoid binding the token to a fixed address because the server's egress IP
+  // can vary by hosting provider.
   const ip = "0.0.0.0";
   const timeoutMs = Number(env.OPENPROVIDER_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
 

@@ -230,22 +230,7 @@ async function saveGooglePhoto(userId, pictureUrl) {
 
 async function saveSocialDisplayName(userId, name) {
   const fullName = String(name || "").trim().slice(0, 120);
-  // #region agent log
-  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6d3aea" },
-    body: JSON.stringify({
-      sessionId: "6d3aea",
-      runId: "pre-fix",
-      hypothesisId: "B",
-      location: "auth.js:saveSocialDisplayName",
-      message: "social name save attempt",
-      data: { hasUserId: Boolean(userId), nameLength: fullName.length },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-  if (!userId) return;
+  if (!userId || !process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) return;
   const admin = getSupabaseAdmin();
   if (!fullName) {
     const created = await admin.from("profiles").upsert({ id: userId }, { onConflict: "id" });
@@ -258,42 +243,10 @@ async function saveSocialDisplayName(userId, name) {
     .eq("id", userId)
     .maybeSingle();
   if (existing.error) throw existing.error;
-  if (existing.data && String(existing.data.full_name || "").trim()) {
-    // #region agent log
-    fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6d3aea" },
-      body: JSON.stringify({
-        sessionId: "6d3aea",
-        runId: "pre-fix",
-        hypothesisId: "B",
-        location: "auth.js:saveSocialDisplayName",
-        message: "social name skipped because profile already has a name",
-        data: { existingNameLength: String(existing.data.full_name || "").trim().length },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    return;
-  }
+  if (existing.data && String(existing.data.full_name || "").trim()) return;
   const { error } = await admin
     .from("profiles")
     .upsert({ id: userId, full_name: fullName }, { onConflict: "id" });
-  // #region agent log
-  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6d3aea" },
-    body: JSON.stringify({
-      sessionId: "6d3aea",
-      runId: "pre-fix",
-      hypothesisId: "B",
-      location: "auth.js:saveSocialDisplayName",
-      message: "social name upsert finished",
-      data: { wrote: !error, errorCode: error ? error.code || "save_failed" : "" },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   if (error) throw error;
 }
 
@@ -301,6 +254,16 @@ const socialTickets = createTicketStore();
 
 function redirectWithError(res, returnTo, code) {
   res.redirect(`${returnTo}?auth_error=${encodeURIComponent(code)}`);
+}
+
+// Facebook must land on the leader profile even when the browser returned
+// the site root. The query string is added by the caller.
+function profileReturnTo(returnTo) {
+  const url = new URL(returnTo);
+  url.pathname = "/profile";
+  url.search = "";
+  url.hash = "";
+  return `${url.origin}/profile`;
 }
 
 router.get("/oauth/:provider/start", (req, res) => {
@@ -314,30 +277,13 @@ router.get("/oauth/:provider/start", (req, res) => {
   }
 
   const creds = appCredentials(provider);
-  const redirectUri = callbackUrl(req, process.env, provider);
-  // #region agent log
-  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1102e" },
-    body: JSON.stringify({
-      sessionId: "b1102e",
-      runId: "pre-fix",
-      hypothesisId: "A",
-      location: "auth.js:oauth/start",
-      message: "oauth start redirect",
-      data: {
-        provider,
-        redirectUri,
-        returnTo,
-        host: req.get("host") || "",
-        idSet: Boolean(creds.id),
-        secretSet: Boolean(creds.secret),
-        secretEqualsId: Boolean(creds.id && creds.secret && creds.id === creds.secret),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
+  let redirectUri;
+  try {
+    redirectUri = callbackUrl(req, process.env, provider);
+  } catch (err) {
+    console.error(`social callback configuration failed: ${err.code || err.message}`);
+    return redirectWithError(res, returnTo, "social_not_configured");
+  }
   const useIdToken = provider === "google" && creds.id && creds.secret === creds.id;
   const nonce = crypto.randomBytes(16).toString("hex");
   const state = signState(
@@ -350,6 +296,7 @@ router.get("/oauth/:provider/start", (req, res) => {
     },
     required("SUPABASE_SECRET_KEY")
   );
+  const configId = String(process.env.META_LOGIN_CONFIG_ID || "").trim();
   res.redirect(
     authorizeUrl(provider, {
       clientId: creds.id,
@@ -357,6 +304,7 @@ router.get("/oauth/:provider/start", (req, res) => {
       state,
       responseType: useIdToken ? "id_token" : "code",
       nonce,
+      configId,
     })
   );
 });
@@ -411,34 +359,13 @@ async function loginFromProviderProfile(profile) {
   } catch (err) {
     console.error(`profile name save failed: ${err.message || err}`);
   }
-  let photoSaved = false;
   if (profile.provider === "google" && profile.picture) {
     try {
-      photoSaved = await saveGooglePhoto(user.id, profile.picture);
+      await saveGooglePhoto(user.id, profile.picture);
     } catch (err) {
       console.error(`profile photo save failed: ${err.message || err}`);
     }
   }
-  // #region agent log
-  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6d3aea" },
-    body: JSON.stringify({
-      sessionId: "6d3aea",
-      runId: "post-fix",
-      hypothesisId: "F",
-      location: "auth.js:loginFromProviderProfile",
-      message: "provider profile saved",
-      data: {
-        provider: profile.provider || "",
-        hasEmail: Boolean(String(profile.email || "").trim()),
-        hasName: Boolean(String(profile.name || "").trim()),
-        photoSaved,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   return socialTickets.issue({
     access_token: session.access_token,
     refresh_token: session.refresh_token,
@@ -490,30 +417,6 @@ async function oauthCallback(req, res, next) {
   const secret = process.env.SUPABASE_SECRET_KEY || "";
   const state = readState(req.query.state, secret);
   const returnTo = state && state.returnTo;
-  // #region agent log
-  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1102e" },
-    body: JSON.stringify({
-      sessionId: "b1102e",
-      runId: "pre-fix",
-      hypothesisId: "D",
-      location: "auth.js:oauth/callback",
-      message: "oauth callback hit",
-      data: {
-        path: req.path,
-        host: req.get("host") || "",
-        provider: state && state.provider ? state.provider : "",
-        hasCode: typeof req.query.code === "string" && req.query.code.length > 0,
-        hasState: Boolean(state),
-        returnTo: returnTo || "",
-        providerError: typeof req.query.error === "string" ? req.query.error : "",
-        redirectUri: state ? callbackUrl(req, process.env, state.provider) : "",
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   if (!returnTo) {
     return res.status(400).json({ error: "social_expired" });
   }
@@ -563,42 +466,12 @@ async function oauthCallback(req, res, next) {
       clientSecret: creds.secret,
     });
     const ticket = await loginFromProviderProfile(profile);
-    // #region agent log
-    fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1102e" },
-      body: JSON.stringify({
-        sessionId: "b1102e",
-        runId: "pre-fix",
-        hypothesisId: "C",
-        location: "auth.js:oauth/callback",
-        message: "oauth profile exchanged",
-        data: {
-          provider: profile.provider,
-          hasProviderUserId: Boolean(profile.providerUserId),
-          returnTo,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    res.redirect(`${returnTo}?auth_ticket=${encodeURIComponent(ticket)}`);
+    const landing = profile.provider === "facebook" ? profileReturnTo(returnTo) : returnTo;
+    console.log(
+      `social sign-in redirect provider=${profile.provider} path=${new URL(landing).pathname}`
+    );
+    res.redirect(`${landing}?auth_ticket=${encodeURIComponent(ticket)}`);
   } catch (err) {
-    // #region agent log
-    fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1102e" },
-      body: JSON.stringify({
-        sessionId: "b1102e",
-        runId: "pre-fix",
-        hypothesisId: "C",
-        location: "auth.js:oauth/callback",
-        message: "oauth callback failed",
-        data: { code: err.code || "", name: err.name || "" },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     console.error(`social sign-in failed: ${err.code || err.message}`);
     if (returnTo) return redirectWithError(res, returnTo, "social_failed");
     next(err);
@@ -630,27 +503,6 @@ router.post("/oauth/exchange", otpLimiter, (req, res) => {
 });
 
 router.post("/otp/send", otpLimiter, async (req, res, next) => {
-  // #region agent log
-  try {
-    require("fs").appendFileSync(
-      "c:\\Users\\HP\\Desktop\\Vote Banker\\.cursor\\debug-f6f27c.log",
-      `${JSON.stringify({
-        sessionId: "f6f27c",
-        runId: "pre-fix",
-        hypothesisId: "B",
-        location: "auth.js:otp/send",
-        message: "otp send reached backend",
-        data: {
-          channel: req.body && req.body.channel,
-          whatsappEnabled: process.env.WHATSAPP_OTP_ENABLED === "true",
-          otpProvider: process.env.OTP_PROVIDER || "unset",
-          origin: req.get("origin") || "",
-        },
-        timestamp: Date.now(),
-      })}\n`
-    );
-  } catch (_) {}
-  // #endregion
   try {
     const phone = normalizePhone(req.body && req.body.phone);
     if (!phone) return res.status(400).json({ error: "invalid_phone" });

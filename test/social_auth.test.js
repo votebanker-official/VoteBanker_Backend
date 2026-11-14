@@ -5,6 +5,7 @@ const {
   signState,
   readState,
   safeReturnTo,
+  callbackUrl,
   authorizeUrl,
   providerConfigured,
   createTicketStore,
@@ -35,11 +36,55 @@ test("return targets stay on allowed origins", () => {
   );
   assert.equal(safeReturnTo("http://localhost:55945/otp", env), "http://localhost:55945/");
   assert.equal(
+    safeReturnTo("http://localhost:59816/profile", env),
+    "http://localhost:59816/profile"
+  );
+  assert.equal(
     safeReturnTo("http://localhost:63026/profile?auth_ticket=abc", env),
     "http://localhost:63026/profile"
   );
+  assert.equal(
+    safeReturnTo("http://localhost:3000/auth/callback", env),
+    "http://localhost:3000/auth/callback"
+  );
   assert.equal(safeReturnTo("https://evil.example/phish", env), null);
   assert.equal(safeReturnTo("javascript:alert(1)", env), null);
+});
+
+test("production VoteBanker frontend origin is allowed by default", () => {
+  assert.equal(
+    safeReturnTo("https://votebanker-frontend.vercel.app/", {}),
+    "https://votebanker-frontend.vercel.app/"
+  );
+  assert.equal(safeReturnTo("https://unknown.example/", {}), null);
+});
+
+test("OAuth callback uses the configured backend origin", () => {
+  const req = { protocol: "https", get: () => "attacker.example" };
+  assert.equal(
+    callbackUrl(req, { PUBLIC_API_URL: "https://api.votebanker.example" }),
+    "https://api.votebanker.example/api/auth/oauth/callback"
+  );
+  assert.equal(
+    callbackUrl(req, { PUBLIC_API_URL: "http://127.0.0.1:5000" }),
+    "http://127.0.0.1:5000/api/auth/oauth/callback"
+  );
+  assert.throws(
+    () => callbackUrl(req, {}),
+    (error) => error.code === "oauth_callback_not_configured"
+  );
+  assert.throws(
+    () => callbackUrl(req, { PUBLIC_API_URL: "http://api.example" }),
+    (error) => error.code === "oauth_callback_invalid"
+  );
+  assert.equal(
+    callbackUrl(
+      { get: () => "localhost:5000" },
+      { GOOGLE_REDIRECT_URI: "http://localhost:3000/auth/callback" },
+      "google"
+    ),
+    "http://localhost:3000/auth/callback"
+  );
 });
 
 test("authorize urls carry the app id and not the secret", () => {
@@ -49,8 +94,18 @@ test("authorize urls carry the app id and not the secret", () => {
     state: "signed",
   });
   assert.match(facebook, /client_id=fb-app/);
-  assert.match(facebook, /facebook\.com/);
+  assert.match(facebook, /facebook\.com\/v27\.0\/dialog\/oauth/);
+  assert.match(facebook, /scope=public_profile/);
   assert.doesNotMatch(facebook, /secret/);
+
+  const business = authorizeUrl("facebook", {
+    clientId: "fb-app",
+    redirectUri: "https://api.example/api/auth/oauth/callback",
+    state: "signed",
+    configId: "1143928571662392",
+  });
+  assert.match(business, /config_id=1143928571662392/);
+  assert.doesNotMatch(business, /scope=/);
 
   const instagram = authorizeUrl("instagram", {
     clientId: "ig-app",
@@ -130,6 +185,31 @@ test("facebook code exchange keeps the provider user id", async () => {
     email: "leader@example.com",
   });
   assert.equal(calls.length, 2);
+  assert.match(calls[0], /graph\.facebook\.com\/v27\.0\/oauth\/access_token/);
+  assert.match(calls[1], /graph\.facebook\.com\/v27\.0\/me/);
+  assert.match(calls[1], /first_name/);
+});
+
+test("facebook name falls back to first and last name", async () => {
+  const fetchImpl = async (url) => {
+    if (String(url).includes("oauth/access_token")) {
+      return { ok: true, async text() { return JSON.stringify({ access_token: "tok" }); } };
+    }
+    return {
+      ok: true,
+      async text() {
+        return JSON.stringify({ id: "9988", first_name: "Asha", last_name: "Patel" });
+      },
+    };
+  };
+  const profile = await exchangeFacebookCode({
+    code: "abc",
+    redirectUri: "https://api.example/cb",
+    clientId: "id",
+    clientSecret: "secret",
+    fetchImpl,
+  });
+  assert.equal(profile.name, "Asha Patel");
 });
 
 test("instagram code exchange accepts the data array shape", async () => {
@@ -151,40 +231,40 @@ test("instagram code exchange accepts the data array shape", async () => {
     clientSecret: "secret",
     fetchImpl,
   });
-
-  test("google code exchange keeps the provider user id", async () => {
-    const calls = [];
-    const fetchImpl = async (url) => {
-      calls.push(String(url));
-      if (String(url).includes("oauth2.googleapis.com/token")) {
-        return { ok: true, async text() { return JSON.stringify({ access_token: "tok" }); } };
-      }
-      return {
-        ok: true,
-        async text() {
-          return JSON.stringify({ sub: "google-123", name: "Leader", email: "leader@example.com" });
-        },
-      };
-    };
-    const profile = await exchangeGoogleCode({
-      code: "abc",
-      redirectUri: "https://api.example/cb",
-      clientId: "id",
-      clientSecret: "secret",
-      fetchImpl,
-    });
-    assert.deepEqual(profile, {
-      provider: "google",
-      providerUserId: "google-123",
-      name: "Leader",
-      email: "leader@example.com",
-      picture: "",
-    });
-    assert.equal(calls.length, 2);
-  });
   assert.equal(profile.provider, "instagram");
   assert.equal(profile.providerUserId, "4455");
   assert.equal(profile.name, "leader.ig");
+});
+
+test("google code exchange keeps the provider user id", async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes("oauth2.googleapis.com/token")) {
+      return { ok: true, async text() { return JSON.stringify({ access_token: "tok" }); } };
+    }
+    return {
+      ok: true,
+      async text() {
+        return JSON.stringify({ sub: "google-123", name: "Leader", email: "leader@example.com" });
+      },
+    };
+  };
+  const profile = await exchangeGoogleCode({
+    code: "abc",
+    redirectUri: "https://api.example/cb",
+    clientId: "id",
+    clientSecret: "secret",
+    fetchImpl,
+  });
+  assert.deepEqual(profile, {
+    provider: "google",
+    providerUserId: "google-123",
+    name: "Leader",
+    email: "leader@example.com",
+    picture: "",
+  });
+  assert.equal(calls.length, 2);
 });
 
 test("google display name falls back to the email and keeps a google photo", async () => {

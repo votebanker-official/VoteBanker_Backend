@@ -11,6 +11,8 @@ const CONNECT_PROVIDERS = new Set([
 ]);
 const TICKET_TTL_MS = 2 * 60 * 1000;
 const STATE_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_FRONTEND_ORIGIN = "https://votebanker-frontend.vercel.app";
+const FACEBOOK_GRAPH_VERSION = "v27.0";
 
 function isProvider(value) {
   return LOGIN_PROVIDERS.has(value);
@@ -77,7 +79,7 @@ function readState(token, secret, now = Date.now()) {
 }
 
 function allowedOrigins(env = process.env) {
-  const origins = new Set();
+  const origins = new Set([DEFAULT_FRONTEND_ORIGIN]);
   for (const raw of [env.FRONTEND_URL, ...(env.CORS_ORIGINS || "").split(",")]) {
     const value = String(raw || "").trim();
     if (!value) continue;
@@ -101,7 +103,11 @@ function safeReturnTo(input, env = process.env) {
   const local = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(url.origin);
   const allowed = allowedOrigins(env);
   if (!local && !allowed.has(url.origin)) return null;
-  const path = url.pathname === "/auth/callback" || url.pathname === "/profile" ? url.pathname : "/";
+  // The leader profile and the Google sign-in bridge may keep their path.
+  // Every other return target stays on the site origin so a crafted path
+  // cannot become an open redirect.
+  const path =
+    url.pathname === "/auth/callback" || url.pathname === "/profile" ? url.pathname : "/";
   return `${url.origin}${path}`;
 }
 
@@ -115,18 +121,55 @@ function callbackUrl(req, env = process.env, provider) {
     }
   }
   const configured = String(env.PUBLIC_API_URL || "").trim().replace(/\/$/, "");
-  if (configured) return `${configured}/api/auth/oauth/callback`;
-  return `${req.protocol}://${req.get("host")}/api/auth/oauth/callback`;
+  if (!configured) {
+    const error = new Error("oauth_callback_not_configured");
+    error.code = "oauth_callback_not_configured";
+    throw error;
+  }
+
+  let url;
+  try {
+    url = new URL(configured);
+  } catch {
+    const error = new Error("oauth_callback_invalid");
+    error.code = "oauth_callback_invalid";
+    throw error;
+  }
+
+  const isLocal =
+    url.hostname === "localhost" ||
+    url.hostname === "127.0.0.1" ||
+    url.hostname === "[::1]";
+  if (
+    (url.protocol !== "https:" && !(isLocal && url.protocol === "http:")) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    (url.pathname !== "/" && url.pathname !== "")
+  ) {
+    const error = new Error("oauth_callback_invalid");
+    error.code = "oauth_callback_invalid";
+    throw error;
+  }
+
+  return `${url.origin}/api/auth/oauth/callback`;
 }
 
-function authorizeUrl(provider, { clientId, redirectUri, state, responseType, nonce }) {
+function authorizeUrl(provider, { clientId, redirectUri, state, responseType, nonce, configId }) {
   if (provider === "facebook") {
-    const url = new URL("https://www.facebook.com/v21.0/dialog/oauth");
+    const url = new URL(`https://www.facebook.com/${FACEBOOK_GRAPH_VERSION}/dialog/oauth`);
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", "public_profile,email");
+    // Facebook Login for Business takes the permissions from the configuration.
+    // Sending scope as well makes Facebook reject the login.
+    if (configId) {
+      url.searchParams.set("config_id", configId);
+    } else {
+      url.searchParams.set("scope", "public_profile,email");
+    }
     return url.toString();
   }
   if (provider === "google") {
@@ -193,7 +236,9 @@ async function fetchJson(url, options, fetchImpl = global.fetch) {
 }
 
 async function exchangeFacebookCode({ code, redirectUri, clientId, clientSecret, fetchImpl }) {
-  const tokenUrl = new URL("https://graph.facebook.com/v21.0/oauth/access_token");
+  const tokenUrl = new URL(
+    `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/oauth/access_token`
+  );
   tokenUrl.searchParams.set("client_id", clientId);
   tokenUrl.searchParams.set("client_secret", clientSecret);
   tokenUrl.searchParams.set("redirect_uri", redirectUri);
@@ -204,8 +249,8 @@ async function exchangeFacebookCode({ code, redirectUri, clientId, clientSecret,
     error.code = "provider_rejected";
     throw error;
   }
-  const profileUrl = new URL("https://graph.facebook.com/v21.0/me");
-  profileUrl.searchParams.set("fields", "id,name,email");
+  const profileUrl = new URL(`https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me`);
+  profileUrl.searchParams.set("fields", "id,name,first_name,last_name,email");
   profileUrl.searchParams.set("access_token", token.access_token);
   const profile = await fetchJson(profileUrl, { method: "GET" }, fetchImpl);
   if (!profile.id) {
@@ -216,9 +261,18 @@ async function exchangeFacebookCode({ code, redirectUri, clientId, clientSecret,
   return {
     provider: "facebook",
     providerUserId: String(profile.id),
-    name: profile.name || "",
+    name: facebookDisplayName(profile),
     email: profile.email || "",
   };
+}
+
+function facebookDisplayName(profile) {
+  const full = String(profile.name || "").trim();
+  if (full) return full;
+  return [profile.first_name, profile.last_name]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(" ");
 }
 
 async function exchangeInstagramCode({ code, redirectUri, clientId, clientSecret, fetchImpl }) {
@@ -384,6 +438,7 @@ function googlePictureUrl(value) {
 
 module.exports = {
   STATE_TTL_MS,
+  DEFAULT_FRONTEND_ORIGIN,
   LOGIN_PROVIDERS,
   CONNECT_PROVIDERS,
   isProvider,

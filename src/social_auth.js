@@ -119,7 +119,7 @@ function callbackUrl(req, env = process.env, provider) {
   return `${req.protocol}://${req.get("host")}/api/auth/oauth/callback`;
 }
 
-function authorizeUrl(provider, { clientId, redirectUri, state }) {
+function authorizeUrl(provider, { clientId, redirectUri, state, responseType, nonce }) {
   if (provider === "facebook") {
     const url = new URL("https://www.facebook.com/v21.0/dialog/oauth");
     url.searchParams.set("client_id", clientId);
@@ -131,12 +131,17 @@ function authorizeUrl(provider, { clientId, redirectUri, state }) {
   }
   if (provider === "google") {
     const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    const idToken = responseType === "id_token";
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
-    url.searchParams.set("response_type", "code");
+    url.searchParams.set("response_type", idToken ? "id_token" : "code");
     url.searchParams.set("scope", "openid email profile");
-    url.searchParams.set("access_type", "offline");
+    if (idToken) {
+      url.searchParams.set("nonce", nonce || "");
+    } else {
+      url.searchParams.set("access_type", "offline");
+    }
     return url.toString();
   }
   const url = new URL("https://www.instagram.com/oauth/authorize");
@@ -294,12 +299,87 @@ async function exchangeGoogleCode({ code, redirectUri, clientId, clientSecret, f
     throw error;
   }
   const given = [profile.given_name, profile.family_name].filter(Boolean).join(" ").trim();
+  const email = String(profile.email || "").trim();
   return {
     provider: "google",
     providerUserId: String(profile.sub),
-    name: String(profile.name || given || "").trim(),
-    email: profile.email || "",
+    name: googleDisplayName(profile.name, given, email),
+    email,
+    picture: googlePictureUrl(profile.picture),
   };
+}
+
+function titleName(value) {
+  return String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) =>
+      part
+        .split(/([-'])/)
+        .map((segment) => {
+          if (!segment || segment === "-" || segment === "'") return segment;
+          return segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase();
+        })
+        .join("")
+    )
+    .join(" ")
+    .slice(0, 120);
+}
+
+function googleDisplayName(name, given, email) {
+  const named = titleName(name || given);
+  if (named) return named;
+  const local = String(email || "").split("@")[0] || "";
+  return titleName(local.replace(/[._+]+/g, " "));
+}
+
+async function googleProfileFromIdToken({ idToken, clientId, nonce, fetchImpl }) {
+  const url = new URL("https://oauth2.googleapis.com/tokeninfo");
+  url.searchParams.set("id_token", idToken);
+  const claims = await fetchJson(url, { method: "GET" }, fetchImpl);
+  if (!claims.sub || claims.aud !== clientId) {
+    const error = new Error("provider_rejected");
+    error.code = "provider_rejected";
+    throw error;
+  }
+  if (claims.iss !== "accounts.google.com" && claims.iss !== "https://accounts.google.com") {
+    const error = new Error("provider_rejected");
+    error.code = "provider_rejected";
+    throw error;
+  }
+  if (nonce && claims.nonce !== nonce) {
+    const error = new Error("provider_rejected");
+    error.code = "provider_rejected";
+    throw error;
+  }
+  if (String(claims.email_verified) === "false") {
+    const error = new Error("provider_rejected");
+    error.code = "provider_rejected";
+    throw error;
+  }
+  const email = String(claims.email || "").trim();
+  const given = [claims.given_name, claims.family_name].filter(Boolean).join(" ").trim();
+  return {
+    provider: "google",
+    providerUserId: String(claims.sub),
+    name: googleDisplayName(claims.name, given, email),
+    email,
+    picture: googlePictureUrl(claims.picture),
+  };
+}
+
+function googlePictureUrl(value) {
+  let url;
+  try {
+    url = new URL(String(value || ""));
+  } catch {
+    return "";
+  }
+  if (url.protocol !== "https:") return "";
+  const host = url.hostname.toLowerCase();
+  if (host !== "googleusercontent.com" && !host.endsWith(".googleusercontent.com")) return "";
+  return url.toString();
 }
 
 module.exports = {
@@ -319,4 +399,7 @@ module.exports = {
   exchangeFacebookCode,
   exchangeInstagramCode,
   exchangeGoogleCode,
+  googleProfileFromIdToken,
+  googleDisplayName,
+  googlePictureUrl,
 };

@@ -11,6 +11,7 @@ const {
   exchangeFacebookCode,
   exchangeInstagramCode,
   exchangeGoogleCode,
+  googleProfileFromIdToken,
 } = require("../src/social_auth");
 
 const secret = "test-secret";
@@ -67,6 +68,18 @@ test("authorize urls carry the app id and not the secret", () => {
   });
   assert.match(google, /accounts\.google\.com\/o\/oauth2\/v2\/auth/);
   assert.match(google, /client_id=google-app/);
+  assert.match(google, /response_type=code/);
+
+  const idToken = authorizeUrl("google", {
+    clientId: "google-app",
+    redirectUri: "http://localhost:3000/auth/callback",
+    state: "signed",
+    responseType: "id_token",
+    nonce: "n1",
+  });
+  assert.match(idToken, /response_type=id_token/);
+  assert.match(idToken, /nonce=n1/);
+  assert.doesNotMatch(idToken, /client_secret/);
 });
 
 test("provider configuration requires both id and secret", () => {
@@ -165,10 +178,95 @@ test("instagram code exchange accepts the data array shape", async () => {
       providerUserId: "google-123",
       name: "Leader",
       email: "leader@example.com",
+      picture: "",
     });
     assert.equal(calls.length, 2);
   });
   assert.equal(profile.provider, "instagram");
   assert.equal(profile.providerUserId, "4455");
   assert.equal(profile.name, "leader.ig");
+});
+
+test("google display name falls back to the email and keeps a google photo", async () => {
+  const fetchImpl = async (url) => {
+    if (String(url).includes("oauth2.googleapis.com/token")) {
+      return { ok: true, async text() { return JSON.stringify({ access_token: "tok" }); } };
+    }
+    return {
+      ok: true,
+      async text() {
+        return JSON.stringify({
+          sub: "google-456",
+          given_name: "rahul",
+          family_name: "sharma",
+          email: "rahul.sharma@gmail.com",
+          picture: "https://lh3.googleusercontent.com/a/rahul",
+        });
+      },
+    };
+  };
+  const profile = await exchangeGoogleCode({
+    code: "abc",
+    redirectUri: "https://api.example/cb",
+    clientId: "id",
+    clientSecret: "secret",
+    fetchImpl,
+  });
+  assert.equal(profile.name, "Rahul Sharma");
+  assert.equal(profile.email, "rahul.sharma@gmail.com");
+  assert.equal(profile.picture, "https://lh3.googleusercontent.com/a/rahul");
+});
+
+test("google name uses the email when the account has no display name", async () => {
+  const fetchImpl = async (url) => {
+    if (String(url).includes("oauth2.googleapis.com/token")) {
+      return { ok: true, async text() { return JSON.stringify({ access_token: "tok" }); } };
+    }
+    return {
+      ok: true,
+      async text() {
+        return JSON.stringify({
+          sub: "google-789",
+          email: "leader.name@gmail.com",
+          picture: "http://evil.example/photo.jpg",
+        });
+      },
+    };
+  };
+  const profile = await exchangeGoogleCode({
+    code: "abc",
+    redirectUri: "https://api.example/cb",
+    clientId: "id",
+    clientSecret: "secret",
+    fetchImpl,
+  });
+  assert.equal(profile.name, "Leader Name");
+  assert.equal(profile.picture, "");
+});
+
+test("google id token claims become the leader name and email", async () => {
+  const fetchImpl = async () => ({
+    ok: true,
+    async text() {
+      return JSON.stringify({
+        aud: "google-app",
+        iss: "https://accounts.google.com",
+        sub: "google-999",
+        nonce: "n1",
+        email: "rahul@gmail.com",
+        email_verified: true,
+        name: "Rahul Sharma",
+        picture: "https://lh3.googleusercontent.com/a/rahul",
+      });
+    },
+  });
+  const profile = await googleProfileFromIdToken({
+    idToken: "token",
+    clientId: "google-app",
+    nonce: "n1",
+    fetchImpl,
+  });
+  assert.equal(profile.name, "Rahul Sharma");
+  assert.equal(profile.email, "rahul@gmail.com");
+  assert.equal(profile.providerUserId, "google-999");
 });

@@ -17,6 +17,8 @@ const {
   exchangeFacebookCode,
   exchangeInstagramCode,
   exchangeGoogleCode,
+  googlePictureUrl,
+  googleProfileFromIdToken,
 } = require("../social_auth");
 
 const router = express.Router();
@@ -144,6 +146,7 @@ async function signInOrCreateSocial(profile) {
       provider_user_id: profile.providerUserId,
       name: profile.name || null,
       contact_email: profile.email || null,
+      avatar_url: profile.picture || null,
     },
   });
   if (created.error && !/already|registered|exists/i.test(created.error.message)) {
@@ -155,20 +158,142 @@ async function signInOrCreateSocial(profile) {
   return data;
 }
 
+async function rememberSocialIdentity(user, profile) {
+  if (!user || !user.id) return;
+  const current =
+    user.user_metadata && typeof user.user_metadata === "object" ? user.user_metadata : {};
+  const metadata = {
+    ...current,
+    auth_provider: profile.provider,
+    provider_user_id: profile.providerUserId,
+    name: profile.name || current.name || null,
+    contact_email: profile.email || current.contact_email || null,
+  };
+  if (profile.picture) metadata.avatar_url = profile.picture;
+  const { error } = await getSupabaseAdmin().auth.admin.updateUserById(user.id, {
+    user_metadata: metadata,
+  });
+  if (error) throw error;
+}
+
+function imageContentType(bytes, header) {
+  const declared = String(header || "").split(";")[0].trim().toLowerCase();
+  if (declared === "image/png" || declared === "image/jpeg" || declared === "image/webp") {
+    return declared;
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return "image/png";
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes.toString("ascii", 0, 4) === "RIFF" &&
+    bytes.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return "";
+}
+
+async function saveGooglePhoto(userId, pictureUrl) {
+  const url = googlePictureUrl(pictureUrl);
+  if (!userId || !url) return false;
+  const admin = getSupabaseAdmin();
+  const existing = await admin
+    .from("profiles")
+    .select("profile_photo_path")
+    .eq("id", userId)
+    .maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data && String(existing.data.profile_photo_path || "").trim()) return false;
+  const response = await fetch(url);
+  if (!response.ok) return false;
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length === 0 || bytes.length > 2 * 1024 * 1024) return false;
+  const contentType = imageContentType(bytes, response.headers.get("content-type"));
+  if (!contentType) return false;
+  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const path = `${userId}/photo.${ext}`;
+  const uploaded = await admin.storage.from("profile-photos").upload(path, bytes, {
+    contentType,
+    upsert: true,
+  });
+  if (uploaded.error) throw uploaded.error;
+  const saved = await admin
+    .from("profiles")
+    .upsert({ id: userId, profile_photo_path: path }, { onConflict: "id" });
+  if (saved.error) throw saved.error;
+  return true;
+}
+
 async function saveSocialDisplayName(userId, name) {
   const fullName = String(name || "").trim().slice(0, 120);
-  if (!userId || !fullName) return;
+  // #region agent log
+  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6d3aea" },
+    body: JSON.stringify({
+      sessionId: "6d3aea",
+      runId: "pre-fix",
+      hypothesisId: "B",
+      location: "auth.js:saveSocialDisplayName",
+      message: "social name save attempt",
+      data: { hasUserId: Boolean(userId), nameLength: fullName.length },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+  if (!userId) return;
   const admin = getSupabaseAdmin();
+  if (!fullName) {
+    const created = await admin.from("profiles").upsert({ id: userId }, { onConflict: "id" });
+    if (created.error) throw created.error;
+    return;
+  }
   const existing = await admin
     .from("profiles")
     .select("full_name")
     .eq("id", userId)
     .maybeSingle();
   if (existing.error) throw existing.error;
-  if (existing.data && String(existing.data.full_name || "").trim()) return;
+  if (existing.data && String(existing.data.full_name || "").trim()) {
+    // #region agent log
+    fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6d3aea" },
+      body: JSON.stringify({
+        sessionId: "6d3aea",
+        runId: "pre-fix",
+        hypothesisId: "B",
+        location: "auth.js:saveSocialDisplayName",
+        message: "social name skipped because profile already has a name",
+        data: { existingNameLength: String(existing.data.full_name || "").trim().length },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    return;
+  }
   const { error } = await admin
     .from("profiles")
     .upsert({ id: userId, full_name: fullName }, { onConflict: "id" });
+  // #region agent log
+  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6d3aea" },
+    body: JSON.stringify({
+      sessionId: "6d3aea",
+      runId: "pre-fix",
+      hypothesisId: "B",
+      location: "auth.js:saveSocialDisplayName",
+      message: "social name upsert finished",
+      data: { wrote: !error, errorCode: error ? error.code || "save_failed" : "" },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   if (error) throw error;
 }
 
@@ -213,19 +338,155 @@ router.get("/oauth/:provider/start", (req, res) => {
     }),
   }).catch(() => {});
   // #endregion
+  const useIdToken = provider === "google" && creds.id && creds.secret === creds.id;
+  const nonce = crypto.randomBytes(16).toString("hex");
   const state = signState(
     {
       provider,
       returnTo,
       exp: Date.now() + STATE_TTL_MS,
-      nonce: crypto.randomBytes(8).toString("hex"),
+      nonce,
+      flow: useIdToken ? "id_token" : "code",
     },
     required("SUPABASE_SECRET_KEY")
   );
-  res.redirect(authorizeUrl(provider, { clientId: creds.id, redirectUri, state }));
+  res.redirect(
+    authorizeUrl(provider, {
+      clientId: creds.id,
+      redirectUri,
+      state,
+      responseType: useIdToken ? "id_token" : "code",
+      nonce,
+    })
+  );
 });
 
+const GOOGLE_ID_TOKEN_PAGE = `<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Signing in</title>
+<p>Signing in with Google…</p>
+<script>
+var hash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+var idToken = hash.get("id_token") || "";
+var state = hash.get("state") || "";
+var error = hash.get("error") || "";
+function leave(url) { location.replace(url || "/"); }
+if (error) {
+  leave("/?auth_error=" + encodeURIComponent(error === "access_denied" ? "social_denied" : "social_failed"));
+} else if (!idToken || !state) {
+  leave("/?auth_error=social_failed");
+} else {
+  var body = new URLSearchParams();
+  body.set("id_token", idToken);
+  body.set("state", state);
+  fetch("/auth/callback", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString()
+  }).then(function (res) {
+    return res.json().catch(function () { return {}; });
+  }).then(function (data) {
+    leave(data && data.redirect);
+  }).catch(function () {
+    leave("/?auth_error=social_failed");
+  });
+}
+</script>`;
+
+function sendGoogleIdTokenBridge(res) {
+  res.set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'");
+  res.set("Cache-Control", "no-store");
+  res.type("html").send(GOOGLE_ID_TOKEN_PAGE);
+}
+
+async function loginFromProviderProfile(profile) {
+  const { session, user } = await signInOrCreateSocial(profile);
+  try {
+    await rememberSocialIdentity(user, profile);
+  } catch (err) {
+    console.error(`social identity save failed: ${err.message || err}`);
+  }
+  try {
+    await saveSocialDisplayName(user.id, profile.name);
+  } catch (err) {
+    console.error(`profile name save failed: ${err.message || err}`);
+  }
+  let photoSaved = false;
+  if (profile.provider === "google" && profile.picture) {
+    try {
+      photoSaved = await saveGooglePhoto(user.id, profile.picture);
+    } catch (err) {
+      console.error(`profile photo save failed: ${err.message || err}`);
+    }
+  }
+  // #region agent log
+  fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "6d3aea" },
+    body: JSON.stringify({
+      sessionId: "6d3aea",
+      runId: "post-fix",
+      hypothesisId: "F",
+      location: "auth.js:loginFromProviderProfile",
+      message: "provider profile saved",
+      data: {
+        provider: profile.provider || "",
+        hasEmail: Boolean(String(profile.email || "").trim()),
+        hasName: Boolean(String(profile.name || "").trim()),
+        photoSaved,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+  return socialTickets.issue({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_at: session.expires_at,
+    user_id: user.id,
+    full_name: profile.name || "",
+    email: profile.email || "",
+    avatar_url: profile.picture || "",
+  });
+}
+
+async function finishGoogleIdToken(req, res) {
+  const secret = process.env.SUPABASE_SECRET_KEY || "";
+  const state = readState(req.body && req.body.state, secret);
+  const returnTo = state && state.returnTo;
+  if (!returnTo || state.provider !== "google" || state.flow !== "id_token") {
+    return res.status(400).json({ error: "social_expired" });
+  }
+  try {
+    const creds = appCredentials("google");
+    const profile = await googleProfileFromIdToken({
+      idToken: req.body.id_token,
+      clientId: creds.id,
+      nonce: state.nonce,
+    });
+    const ticket = await loginFromProviderProfile(profile);
+    res.json({ redirect: `${returnTo}?auth_ticket=${encodeURIComponent(ticket)}` });
+  } catch (err) {
+    console.error(`google id token sign-in failed: ${err.code || err.message}`);
+    res.status(401).json({
+      error: "social_failed",
+      redirect: `${returnTo}?auth_error=social_failed`,
+    });
+  }
+}
+
 async function oauthCallback(req, res, next) {
+  if (req.method === "POST" && req.body && typeof req.body.id_token === "string") {
+    return finishGoogleIdToken(req, res);
+  }
+  if (
+    req.method === "GET" &&
+    !req.query.code &&
+    !req.query.state &&
+    !req.query.error
+  ) {
+    return sendGoogleIdTokenBridge(res);
+  }
   const secret = process.env.SUPABASE_SECRET_KEY || "";
   const state = readState(req.query.state, secret);
   const returnTo = state && state.returnTo;
@@ -301,20 +562,7 @@ async function oauthCallback(req, res, next) {
       clientId: creds.id,
       clientSecret: creds.secret,
     });
-    const { session, user } = await signInOrCreateSocial(profile);
-    try {
-      await saveSocialDisplayName(user.id, profile.name);
-    } catch (err) {
-      console.error(`profile name save failed: ${err.message || err}`);
-    }
-    const ticket = socialTickets.issue({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at,
-      user_id: user.id,
-      full_name: profile.name || "",
-      email: profile.email || "",
-    });
+    const ticket = await loginFromProviderProfile(profile);
     // #region agent log
     fetch("http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c", {
       method: "POST",
@@ -376,6 +624,7 @@ router.post("/oauth/exchange", otpLimiter, (req, res) => {
       phone: "",
       full_name: session.full_name || "",
       email: session.email || "",
+      avatar_url: session.avatar_url || "",
     },
   });
 });

@@ -134,6 +134,11 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.get("/auth/callback", authRoutes.oauthCallback);
+app.post(
+  "/auth/callback",
+  express.urlencoded({ extended: false, limit: "20kb" }),
+  authRoutes.oauthCallback
+);
 app.use("/api/profile", profileRoutes);
 app.use("/api/websites", websiteRoutes);
 app.use("/api/location", locationRoutes);

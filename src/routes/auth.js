@@ -294,6 +294,9 @@ router.get("/oauth/:provider/start", (req, res) => {
   const returnTo = safeReturnTo(req.query.return_to);
   if (!returnTo) return res.status(400).json({ error: "invalid_return" });
   if (!providerConfigured(provider)) {
+    // #region agent log
+    fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'90cc82'},body:JSON.stringify({sessionId:'90cc82',runId:'pre-fix',hypothesisId:'A',location:'auth.js:oauth-start',message:'provider not configured',data:{provider,demo:isDemoOtpEnabled(),port:String(process.env.PORT||''),reqHost:String(req.get('host')||'')},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     // Same demo path as WhatsApp OTP: local sign-in without Meta/Google apps.
     if (isDemoOtpEnabled() && (provider === "facebook" || provider === "google")) {
       const session = demoSocialSession(provider);
@@ -327,6 +330,9 @@ router.get("/oauth/:provider/start", (req, res) => {
     required("SUPABASE_SECRET_KEY")
   );
   const configId = String(process.env.META_LOGIN_CONFIG_ID || "").trim();
+  // #region agent log
+  fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'90cc82'},body:JSON.stringify({sessionId:'90cc82',runId:'pre-fix',hypothesisId:'A-B-C',location:'auth.js:oauth-start',message:'oauth start',data:{provider,port:String(process.env.PORT||''),reqHost:String(req.get('host')||''),redirectUri,useIdToken:Boolean(useIdToken),idLen:String(creds.id||'').length,secretLen:String(creds.secret||'').length,idQuoted:/^".*"$/.test(String(creds.id||'')),secretQuoted:/^".*"$/.test(String(creds.secret||'')),secretEqualsId:creds.secret===creds.id,returnHost:(()=>{try{return new URL(returnTo).host}catch{return ''}})()},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   res.redirect(
     authorizeUrl(provider, {
       clientId: creds.id,
@@ -433,6 +439,9 @@ async function finishGoogleIdToken(req, res) {
 }
 
 async function oauthCallback(req, res, next) {
+  // #region agent log
+  fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'90cc82'},body:JSON.stringify({sessionId:'90cc82',runId:'pre-fix',hypothesisId:'C-D',location:'auth.js:oauth-callback',message:'oauth callback hit',data:{method:req.method,path:req.path,hasCode:Boolean(req.query&&req.query.code),hasState:Boolean(req.query&&req.query.state),oauthError:String((req.query&&req.query.error)||'').slice(0,80),hasIdToken:Boolean(req.body&&req.body.id_token)},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   if (req.method === "POST" && req.body && typeof req.body.id_token === "string") {
     return finishGoogleIdToken(req, res);
   }
@@ -503,6 +512,9 @@ async function oauthCallback(req, res, next) {
     res.redirect(`${landing}?auth_ticket=${encodeURIComponent(ticket)}`);
   } catch (err) {
     console.error(`social sign-in failed: ${err.code || err.message}`);
+    // #region agent log
+    fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'90cc82'},body:JSON.stringify({sessionId:'90cc82',runId:'pre-fix',hypothesisId:'D',location:'auth.js:oauth-callback',message:'social sign-in failed',data:{code:String(err.code||''),providerStatus:err.providerStatus||0,providerError:String(err.providerError||'').slice(0,80),providerDescription:String(err.providerDescription||'').slice(0,180)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (returnTo) return redirectWithError(res, returnTo, "social_failed");
     next(err);
   }

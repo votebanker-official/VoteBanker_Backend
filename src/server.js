@@ -25,6 +25,7 @@ const { createSocialConnectionsRouter } = require("./routes/social_connections")
 const { createVolunteersRouter } = require("./volunteers");
 const { createTeamMembersRouter } = require("./team_members");
 const { createAdminRouter } = require("./routes/admin");
+const { createCampaignMediaRouter } = require("./routes/campaign_media");
 
 loadEnv();
 
@@ -132,6 +133,10 @@ app.get("/", (_req, res) => {
       "GET /api/admin/clients",
       "GET /api/admin/purchases",
       "GET /api/admin/payments",
+      "GET /api/campaign-media",
+      "POST|DELETE /api/campaign-media/logo",
+      "POST /api/campaign-media/photos",
+      "DELETE /api/campaign-media/photos/:id",
     ],
   });
 });
@@ -163,6 +168,7 @@ app.use("/api/social-media", createSocialMediaRouter());
 app.use("/api/volunteers", createVolunteersRouter());
 app.use("/api/team-members", createTeamMembersRouter());
 app.use("/api/admin", createAdminRouter());
+app.use("/api/campaign-media", createCampaignMediaRouter());
 
 app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });

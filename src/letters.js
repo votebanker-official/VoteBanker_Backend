@@ -2,6 +2,7 @@ const express = require("express");
 
 const { composeLetter, DESIGNATIONS } = require("./letter_compose");
 const { generateLetterWithAi, readSpeechAiConfig } = require("./letter_ai");
+const { trackRequest } = require("./admin/activity");
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -110,6 +111,14 @@ function createLettersRouter(options = {}) {
   const router = express.Router();
   router.post("/generate", async (req, res) => {
     const result = await generateLetter(req.body, options);
+    if (result.status === 200 && result.body && result.body.success) {
+      await trackRequest(req, {
+        eventType: "content_studio",
+        description: "Generated a letter",
+        resourceType: "letter",
+        status: "recorded",
+      });
+    }
     res.status(result.status).json(result.body);
   });
   return router;

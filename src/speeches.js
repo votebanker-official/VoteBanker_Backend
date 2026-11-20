@@ -2,6 +2,7 @@ const express = require("express");
 
 const { composeMockSpeech } = require("./speech_mock");
 const { generateWithAi, readSpeechAiConfig } = require("./speech_ai");
+const { trackRequest } = require("./admin/activity");
 
 const SPEECH_TYPES = [
   "Public Meeting",
@@ -102,6 +103,14 @@ function createSpeechesRouter(options = {}) {
 
   router.post("/generate", async (req, res) => {
     const result = await generateSpeech(req.body, options);
+    if (result.status === 200 && result.body && result.body.success) {
+      await trackRequest(req, {
+        eventType: "content_studio",
+        description: "Generated a speech",
+        resourceType: "speech",
+        status: "recorded",
+      });
+    }
     res.status(result.status).json(result.body);
   });
 

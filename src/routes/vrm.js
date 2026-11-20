@@ -10,6 +10,7 @@ const {
   stableBatchId,
   updateVoterContacts,
 } = require("../vrm/records");
+const { trackActivity } = require("../admin/activity");
 
 const router = express.Router();
 
@@ -164,6 +165,15 @@ router.post("/import/confirm", requireUser, async (req, res, next) => {
     const result = await importVoterRecords(req.user.id, capped, {
       batchId: typeof source.batchId === "string" ? source.batchId : undefined,
       sourceLabel: source.sourceLabel || "confirm",
+    });
+    await trackActivity({
+      profileId: req.user.id,
+      eventType: "voters",
+      description: `Imported voter records (${result.inserted} added)`,
+      resourceType: "vrm_batch",
+      resourceId: result.batchId,
+      status: "recorded",
+      dedupeKey: result.batchId ? `vrm:${req.user.id}:${result.batchId}` : undefined,
     });
 
     return res.json({

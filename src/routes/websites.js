@@ -3,6 +3,7 @@ const rateLimit = require("express-rate-limit");
 
 const { getSupabaseAdmin, getSupabasePublic } = require("../lib/clients");
 const { generateWebsite } = require("../website_ai");
+const { trackActivity } = require("../admin/activity");
 
 const router = express.Router();
 
@@ -346,6 +347,15 @@ router.post("/me/publish", requireUser, async (req, res, next) => {
         .select("*")
         .single();
       if (pendingError) throw pendingError;
+      await trackActivity({
+        profileId: req.user.id,
+        eventType: "payment",
+        description: "Website publish is waiting for a verified payment",
+        resourceType: "website",
+        resourceId: pending.id,
+        status: "pending",
+        dedupeKey: `website-payment:${pending.id}:${pending.updated_at}`,
+      });
       return res.status(402).json({
         error: "payment_required",
         website: toApiWebsite(pending),
@@ -373,6 +383,15 @@ router.post("/me/publish", requireUser, async (req, res, next) => {
       .select("*")
       .single();
     if (error) throw error;
+    await trackActivity({
+      profileId: req.user.id,
+      eventType: "campaign",
+      description: "Published a leader website",
+      resourceType: "website",
+      resourceId: data.id,
+      status: "published",
+      dedupeKey: `website-published:${data.id}:${data.published_at}`,
+    });
 
     res.json({ website: toApiWebsite(data) });
   } catch (err) {

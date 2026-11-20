@@ -1,5 +1,7 @@
 const express = require("express");
 
+const { trackActivity } = require("./admin/activity");
+
 const ROLES = [
   "Campaign Manager",
   "Coordinator",
@@ -100,6 +102,15 @@ function createTeamMembersRouter(options = {}) {
       }
       const member = await insertMember(fetchImpl, supabaseUrl, secretKey, userId, parsed.value, memory);
       const all = await listMembers(fetchImpl, supabaseUrl, secretKey, userId, memory);
+      await trackActivity({
+        profileId: userId,
+        eventType: "team",
+        description: `Added team member ${parsed.value.fullName || ""}`.trim(),
+        resourceType: "team_member",
+        resourceId: member && member.id,
+        status: "recorded",
+        dedupeKey: member && member.id ? `team:${member.id}` : undefined,
+      });
       res.status(201).json({ success: true, member, stats: statsFor(all) });
     } catch (err) {
       console.error(err.message);

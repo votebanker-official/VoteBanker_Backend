@@ -1,4 +1,9 @@
 require("dotenv").config();
+const { installSystemCertificates } = require("./lib/system_certs");
+const trustedRoots = installSystemCertificates();
+if (trustedRoots) {
+  console.log(`trusting ${trustedRoots} operating-system certificate roots`);
+}
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -19,6 +24,7 @@ const { createSocialMediaRouter } = require("./routes/social_media");
 const { createSocialConnectionsRouter } = require("./routes/social_connections");
 const { createVolunteersRouter } = require("./volunteers");
 const { createTeamMembersRouter } = require("./team_members");
+const { createAdminRouter } = require("./routes/admin");
 
 loadEnv();
 
@@ -121,6 +127,11 @@ app.get("/", (_req, res) => {
       "GET /api/volunteers/teams",
       "GET|POST /api/team-members",
       "GET|PATCH|DELETE /api/team-members/:id",
+      "GET /api/admin/me",
+      "GET /api/admin/overview",
+      "GET /api/admin/clients",
+      "GET /api/admin/purchases",
+      "GET /api/admin/payments",
     ],
   });
 });
@@ -151,6 +162,7 @@ app.use("/api/social-connections", createSocialConnectionsRouter());
 app.use("/api/social-media", createSocialMediaRouter());
 app.use("/api/volunteers", createVolunteersRouter());
 app.use("/api/team-members", createTeamMembersRouter());
+app.use("/api/admin", createAdminRouter());
 
 app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });

@@ -2,6 +2,7 @@ const express = require("express");
 
 const { getSupabaseAdmin, getSupabasePublic } = require("../lib/clients");
 const { validateLocationIds } = require("../locations");
+const { trackActivity } = require("../admin/activity");
 
 const router = express.Router();
 
@@ -202,6 +203,7 @@ router.put("/", requireUser, async (req, res, next) => {
           ? req.body.last_route
           : account?.last_route || "/profile";
       await saveDemoAccount(req.user.phone, profile, lastRoute);
+      await trackProfileChange(req);
       return res.json({ profile });
     }
     const built = buildProfileUpdate(req.body, req.user);
@@ -213,6 +215,7 @@ router.put("/", requireUser, async (req, res, next) => {
       .select(PROFILE_COLUMNS)
       .single();
     if (error) throw error;
+    await trackProfileChange(req);
     res.json({ profile: withPhotoUrl(data, process.env.SUPABASE_URL) });
   } catch (err) {
     next(err);
@@ -287,3 +290,18 @@ module.exports = router;
 module.exports.buildProfileUpdate = buildProfileUpdate;
 module.exports.publicPhotoUrl = publicPhotoUrl;
 module.exports.photoExtension = photoExtension;
+
+async function trackProfileChange(req) {
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  const meaningful = Object.keys(body).some((key) => key !== "last_route");
+  if (!meaningful) return;
+  await trackActivity({
+    profileId: req.user.id,
+    eventType: "profile_update",
+    description: "Updated profile",
+    resourceType: "profile",
+    resourceId: req.user.id,
+    status: "recorded",
+    dedupeKey: `profile:${req.user.id}:${new Date().toISOString().slice(0, 16)}`,
+  });
+}

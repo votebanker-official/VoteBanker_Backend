@@ -1,4 +1,21 @@
 const express = require("express");
+const { trackRequest } = require("./admin/activity");
+const { PRESET_QUANTITIES, isOrderQuantity, normalizeSlabs, quoteMerchandise } = require("./merchandise_pricing");
+
+const configuredUnitPrices = {
+  "t-shirt": 19900,
+  scarf: 5000,
+  flag: 10000,
+  badge: 6000,
+  cap: 12000,
+  mug: 8000,
+  poster: 15000,
+  sticker: 2000,
+  keychain: 4000,
+  pen: 1000,
+  bag: 15000,
+  "gift-box": 5000,
+};
 
 const colors = ["White", "Black", "Navy", "Saffron", "Green", "Red"];
 
@@ -30,7 +47,7 @@ function product(slug, name, description, kind, sizes, sortOrder) {
   };
 }
 
-function validateOrder(body) {
+function validateOrder(body, options = {}) {
   const source = body && typeof body === "object" ? body : {};
   const item = catalog.find((entry) => entry.slug === source.product_slug);
   if (!item) {
@@ -43,7 +60,7 @@ function validateOrder(body) {
   }
 
   const quantity = Number(source.quantity);
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 500) {
+  if (!isOrderQuantity(quantity)) {
     return { error: "invalid_quantity" };
   }
 
@@ -81,21 +98,25 @@ function validateOrder(body) {
     campaignPhoto = campaignPhoto.replace(/\s+/g, "");
   }
 
-  return {
-    value: {
-      product_slug: item.slug,
-      product_name: item.name,
-      campaign_line: campaignLine,
-      campaign_photo: campaignPhoto,
-      size,
-      color,
-      quantity,
-      contact_name: contactName,
-      contact_phone: contactPhone,
-      notes: String(source.notes || "").trim().slice(0, 400),
-      status: "requested",
-    },
+  const priced = quoteMerchandise(options.priceSlabs, quantity);
+  const value = {
+    product_slug: item.slug,
+    product_name: item.name,
+    campaign_line: campaignLine,
+    campaign_photo: campaignPhoto,
+    size,
+    color,
+    quantity,
+    contact_name: contactName,
+    contact_phone: contactPhone,
+    notes: String(source.notes || "").trim().slice(0, 400),
+    status: "requested",
   };
+  if (!priced.error) {
+    value.unit_price_paise = priced.unit_price_paise;
+    value.line_total_paise = priced.line_total_paise;
+  }
+  return { value };
 }
 
 function createMerchandiseRouter(options = {}) {
@@ -127,8 +148,35 @@ function createMerchandiseRouter(options = {}) {
     res.json({ orders: result.orders });
   });
 
+  router.post("/quote", async (req, res) => {
+    const stored = await readProducts(fetchImpl, supabaseUrl, secretKey);
+    const source = req.body && typeof req.body === "object" ? req.body : {};
+    const item = stored.products.find((entry) => entry.slug === source.product_slug);
+    if (!item || item.available === false) {
+      res.status(400).json({ error: "unknown_product" });
+      return;
+    }
+    const quantity = Number(source.quantity);
+    const priced = quoteMerchandise(item.price_slabs, quantity);
+    if (priced.error) {
+      res.status(priced.error === "invalid_quantity" ? 400 : 409).json({ error: priced.error });
+      return;
+    }
+    res.json({
+      product_slug: item.slug,
+      product_name: item.name,
+      quantity,
+      unit_price_paise: priced.unit_price_paise,
+      line_total_paise: priced.line_total_paise,
+      currency: priced.currency,
+    });
+  });
+
   router.post("/orders", async (req, res) => {
-    const parsed = validateOrder(req.body);
+    const stored = await readProducts(fetchImpl, supabaseUrl, secretKey);
+    const source = req.body && typeof req.body === "object" ? req.body : {};
+    const item = stored.products.find((entry) => entry.slug === source.product_slug);
+    const parsed = validateOrder(req.body, { priceSlabs: item && item.price_slabs });
     if (parsed.error) {
       res.status(400).json({ error: parsed.error });
       return;
@@ -145,7 +193,19 @@ function createMerchandiseRouter(options = {}) {
       row.profile_id = userId;
     }
 
-    const saved = await insertOrder(fetchImpl, supabaseUrl, secretKey, row);
+    let saved = await insertOrder(fetchImpl, supabaseUrl, secretKey, row);
+    if (saved.unknownColumn) {
+      delete row.unit_price_paise;
+      delete row.line_total_paise;
+      saved = await insertOrder(fetchImpl, supabaseUrl, secretKey, row);
+      if (saved.ok && parsed.value.unit_price_paise != null) {
+        saved.order = {
+          ...saved.order,
+          unit_price_paise: parsed.value.unit_price_paise,
+          line_total_paise: parsed.value.line_total_paise,
+        };
+      }
+    }
     if (saved.missingProfile && userId) {
       delete row.profile_id;
       const retry = await insertOrder(fetchImpl, supabaseUrl, secretKey, row);
@@ -154,6 +214,14 @@ function createMerchandiseRouter(options = {}) {
         return;
       }
       res.status(201).json({ order: retry.order });
+      await trackRequest(req, {
+        eventType: "purchase",
+        description: `Requested ${retry.order.product_name || "merchandise"}`,
+        resourceType: "merchandise_order",
+        resourceId: retry.order && retry.order.id,
+        status: "requested",
+        dedupeKey: retry.order && retry.order.id ? `purchase:${retry.order.id}` : undefined,
+      });
       return;
     }
 
@@ -162,32 +230,80 @@ function createMerchandiseRouter(options = {}) {
       return;
     }
     res.status(201).json({ order: saved.order });
+    await trackRequest(req, {
+      eventType: "purchase",
+      description: `Requested ${saved.order.product_name || "merchandise"}`,
+      resourceType: "merchandise_order",
+      resourceId: saved.order && saved.order.id,
+      status: "requested",
+      dedupeKey: saved.order && saved.order.id ? `purchase:${saved.order.id}` : undefined,
+    });
   });
 
   return router;
 }
 
+function publishProduct(item) {
+  return {
+    slug: item.slug,
+    name: item.name,
+    description: item.description || "",
+    kind: item.kind,
+    sizes: Array.isArray(item.sizes) ? item.sizes : [],
+    colors: Array.isArray(item.colors) ? item.colors : colors,
+    sort_order: item.sort_order,
+    active: item.active !== false,
+    available: item.active !== false && item.available !== false,
+    minimum_order_quantity: 50,
+    price_slabs: priceSlabsFor(item.slug, item.price_slabs),
+  };
+}
+
+function priceSlabsFor(slug, stored) {
+  const rows = normalizeSlabs(stored);
+  if (rows.length > 0) {
+    return rows;
+  }
+  const unit = configuredUnitPrices[slug];
+  if (!Number.isInteger(unit)) {
+    return [];
+  }
+  return PRESET_QUANTITIES.map((minQuantity) => ({
+    min_quantity: minQuantity,
+    unit_price_paise: unit,
+  }));
+}
+
 async function readProducts(fetchImpl, supabaseUrl, secretKey) {
+  const fallback = catalog.map(publishProduct);
   if (!supabaseUrl || !secretKey) {
-    return { products: catalog, storageReady: false };
+    return { products: fallback, storageReady: false };
   }
 
-  const response = await supabaseFetch(
+  const withSlabs = await supabaseFetch(
     fetchImpl,
     supabaseUrl,
     secretKey,
-    "/rest/v1/merchandise_products?select=slug,name,description,kind,sizes,colors,sort_order,active&active=eq.true&order=sort_order.asc",
+    "/rest/v1/merchandise_products?select=slug,name,description,kind,sizes,colors,sort_order,active,price_slabs&active=eq.true&order=sort_order.asc",
   );
+  const response = withSlabs.ok
+    ? withSlabs
+    : await supabaseFetch(
+        fetchImpl,
+        supabaseUrl,
+        secretKey,
+        "/rest/v1/merchandise_products?select=slug,name,description,kind,sizes,colors,sort_order,active&active=eq.true&order=sort_order.asc",
+      );
   if (!response.ok) {
-    return { products: catalog, storageReady: false };
+    return { products: fallback, storageReady: false };
   }
 
   const rows = Array.isArray(response.body) ? response.body : [];
   if (rows.length === 0) {
     await seedProducts(fetchImpl, supabaseUrl, secretKey);
-    return { products: catalog, storageReady: true };
+    return { products: fallback, storageReady: true };
   }
-  return { products: rows, storageReady: true };
+  return { products: rows.map(publishProduct), storageReady: true };
 }
 
 async function seedProducts(fetchImpl, supabaseUrl, secretKey) {
@@ -203,10 +319,19 @@ async function readOrders(fetchImpl, supabaseUrl, secretKey, userId) {
     fetchImpl,
     supabaseUrl,
     secretKey,
-    `/rest/v1/merchandise_orders?select=id,product_name,campaign_line,campaign_photo,size,color,quantity,status,created_at&profile_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
+    `/rest/v1/merchandise_orders?select=id,product_name,campaign_line,campaign_photo,size,color,quantity,unit_price_paise,line_total_paise,status,created_at&profile_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
   );
   if (!response.ok) {
-    return { ok: false, orders: [] };
+    const plain = await supabaseFetch(
+      fetchImpl,
+      supabaseUrl,
+      secretKey,
+      `/rest/v1/merchandise_orders?select=id,product_name,campaign_line,campaign_photo,size,color,quantity,status,created_at&profile_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`,
+    );
+    if (!plain.ok) {
+      return { ok: false, orders: [] };
+    }
+    return { ok: true, orders: Array.isArray(plain.body) ? plain.body : [] };
   }
   return { ok: true, orders: Array.isArray(response.body) ? response.body : [] };
 }
@@ -226,6 +351,7 @@ async function insertOrder(fetchImpl, supabaseUrl, secretKey, row) {
     ok: false,
     notReady: response.status === 404 || code === "PGRST205" || code === "42P01",
     missingProfile: code === "23503",
+    unknownColumn: code === "42703" || code === "PGRST204",
   };
 }
 
@@ -284,5 +410,7 @@ async function supabaseFetch(fetchImpl, supabaseUrl, secretKey, path, options = 
 module.exports = {
   catalog,
   validateOrder,
+  quoteMerchandise,
+  priceSlabsFor,
   createMerchandiseRouter,
 };

@@ -2,6 +2,8 @@ const crypto = require("crypto");
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 
+const { noteLogin, trackActivity } = require("../admin/activity");
+const { authenticate } = require("../admin/access");
 const { verifyService, getSupabaseAdmin, getSupabasePublic, required } = require("../lib/clients");
 const {
   STATE_TTL_MS,
@@ -326,7 +328,10 @@ router.get("/oauth/:provider/start", (req, res) => {
     },
     required("SUPABASE_SECRET_KEY")
   );
-  const configId = String(process.env.META_LOGIN_CONFIG_ID || "").trim();
+  // Facebook Login for Business rejects profile and email on their own.
+  // The configuration supplies the required permission, so no scope is sent.
+  const configId =
+    provider === "facebook" ? String(process.env.META_LOGIN_CONFIG_ID || "").trim() : "";
   res.redirect(
     authorizeUrl(provider, {
       clientId: creds.id,
@@ -389,6 +394,7 @@ async function loginFromProviderProfile(profile) {
   } catch (err) {
     console.error(`profile name save failed: ${err.message || err}`);
   }
+  await noteLogin({ id: user.id, phone: "" });
   if (profile.provider === "google" && profile.picture) {
     try {
       await saveGooglePhoto(user.id, profile.picture);
@@ -601,6 +607,7 @@ router.post("/otp/verify", otpLimiter, async (req, res, next) => {
     }
 
     const { session, user } = await signInOrCreate(phone);
+    await noteLogin({ id: user.id, phone });
     res.json({
       access_token: session.access_token,
       refresh_token: session.refresh_token,
@@ -617,3 +624,16 @@ router.post("/otp/verify", otpLimiter, async (req, res, next) => {
 
 module.exports = router;
 module.exports.oauthCallback = oauthCallback;
+
+router.post("/session/end", async (req, res) => {
+  const user = await authenticate(req);
+  if (!user) return res.status(401).json({ error: "unauthorized" });
+  await trackActivity({
+    profileId: user.id,
+    eventType: "logout",
+    description: "Signed out",
+    status: "recorded",
+    dedupeKey: `logout:${user.id}:${new Date().toISOString().slice(0, 16)}`,
+  });
+  res.json({ ok: true });
+});

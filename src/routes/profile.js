@@ -48,9 +48,9 @@ async function saveDemoAccount(phone, profile, lastRoute) {
 }
 
 const COLUMNS =
-  "id, full_name, phone, selected_domain, language, designation, organization, country, " +
+  "id, full_name, phone, selected_domain, language, designation, assembly_constituency, organization, country, " +
   "country_code, state_id, district_id, assembly_constituency_id, " +
-  "state_region, constituency, public_contact, website_template, social_channels, " +
+  "state_region, constituency, public_contact, contact_email, website_template, social_channels, " +
   "vrm_requested, booth_number, booth_name, profile_photo_path, created_at, updated_at";
 const PROFILE_COLUMNS = COLUMNS.replace(
   "created_at, updated_at",
@@ -63,7 +63,9 @@ const TEXT_FIELDS = {
   selected_domain: ["selected_domain", 253],
   language: ["language", 10],
   designation: ["designation", 120],
+  assembly_constituency: ["assembly_constituency", 160],
   organization: ["organization", 160],
+  contact_email: ["contact_email", 160],
   country: ["country", 80],
   state_region: ["state_region", 80],
   constituency: ["constituency", 120],
@@ -148,6 +150,14 @@ function buildProfileUpdate(body, user) {
   return { update };
 }
 
+function reconcileDesignation(update, current) {
+  if (!update.assembly_constituency || Object.hasOwn(update, "designation")) return;
+  const previous = current && typeof current.designation === "string" ? current.designation.trim() : "";
+  if (previous && previous === String(update.assembly_constituency).trim()) {
+    update.designation = "";
+  }
+}
+
 function photoExtension(contentType) {
   if (contentType === "image/png") return "png";
   if (contentType === "image/webp") return "webp";
@@ -197,6 +207,7 @@ router.put("/", requireUser, async (req, res, next) => {
       if (built.error) return res.status(built.status).json({ error: built.error });
       const account = await demoAccount(req.user.phone);
       const current = account?.profile || {};
+      reconcileDesignation(built.update, current);
       const profile = { ...current, ...built.update, id: req.user.id };
       const lastRoute =
         typeof req.body.last_route === "string" && req.body.last_route.startsWith("/")
@@ -208,6 +219,14 @@ router.put("/", requireUser, async (req, res, next) => {
     }
     const built = buildProfileUpdate(req.body, req.user);
     if (built.error) return res.status(built.status).json({ error: built.error });
+    if (built.update.assembly_constituency && !Object.hasOwn(built.update, "designation")) {
+      const existing = await getSupabaseAdmin()
+        .from("profiles")
+        .select("designation")
+        .eq("id", req.user.id)
+        .maybeSingle();
+      if (!existing.error) reconcileDesignation(built.update, existing.data);
+    }
 
     const { data, error } = await getSupabaseAdmin()
       .from("profiles")

@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 
 const { noteLogin, trackActivity } = require("../admin/activity");
 const { authenticate } = require("../admin/access");
+const { createSupabaseRepository } = require("../admin/repository");
 const { verifyService, getSupabaseAdmin, getSupabasePublic, required } = require("../lib/clients");
 const {
   STATE_TTL_MS,
@@ -24,6 +25,7 @@ const {
 } = require("../social_auth");
 
 const router = express.Router();
+const accountAccess = createSupabaseRepository();
 
 const E164 = /^\+[1-9]\d{7,14}$/;
 const CODE = /^\d{4,10}$/;
@@ -397,7 +399,13 @@ async function loginFromProviderProfile(profile) {
   } catch (err) {
     console.error(`profile name save failed: ${err.message || err}`);
   }
-  await noteLogin({ id: user.id, phone: "" });
+  const storedMeta = user.user_metadata && typeof user.user_metadata === "object" ? user.user_metadata : {};
+  const contactEmail = String(profile.email || storedMeta.contact_email || "").trim();
+  await noteLogin({
+    id: user.id,
+    phone: "",
+    email: contactEmail,
+  });
   if (profile.provider === "google" && profile.picture) {
     try {
       await saveGooglePhoto(user.id, profile.picture);
@@ -411,7 +419,7 @@ async function loginFromProviderProfile(profile) {
     expires_at: session.expires_at,
     user_id: user.id,
     full_name: profile.name || "",
-    email: profile.email || "",
+    email: contactEmail,
     avatar_url: profile.picture || "",
   });
 }
@@ -525,6 +533,50 @@ async function oauthCallback(req, res, next) {
 
 router.get("/oauth/callback", oauthCallback);
 router.get("/callback", oauthCallback);
+
+router.get("/me", async (req, res) => {
+  try {
+    const user = await authenticate(req);
+    if (!user) return res.status(401).json({ error: "unauthorized" });
+    const access = await accountAccess.accessFor(user);
+    res.json({
+      id: user.id,
+      role: access.admin ? "admin" : "client",
+    });
+  } catch (err) {
+    if (err && err.code === "admin_not_ready") {
+      return res.status(503).json({ error: "admin_not_ready" });
+    }
+    console.error(`session role lookup failed: ${err.message || err}`);
+    res.status(500).json({ error: "server_error" });
+  }
+});
+
+router.post("/session/refresh", async (req, res) => {
+  const refreshToken = req.body && req.body.refresh_token;
+  if (typeof refreshToken !== "string" || refreshToken.trim().length < 20) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  const { data, error } = await getSupabasePublic().auth.refreshSession({
+    refresh_token: refreshToken.trim(),
+  });
+  if (error || !data.session || !data.user) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  const meta = data.user.user_metadata && typeof data.user.user_metadata === "object" ? data.user.user_metadata : {};
+  res.json({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    expires_at: data.session.expires_at,
+    user: {
+      id: data.user.id,
+      phone: data.user.phone || "",
+      full_name: meta.name || "",
+      email: meta.contact_email || "",
+      avatar_url: meta.avatar_url || "",
+    },
+  });
+});
 
 router.post("/oauth/exchange", otpLimiter, (req, res) => {
   const ticket = req.body && req.body.ticket;

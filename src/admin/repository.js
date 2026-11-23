@@ -1,5 +1,5 @@
 const { getSupabaseAdmin } = require("../lib/clients");
-const { adminPhones, isUuid, phoneFromUser } = require("./access");
+const { emailFromUser, isListedAdmin, isUuid, phoneFromUser } = require("./access");
 const {
   parseRange,
   parsePage,
@@ -19,7 +19,7 @@ const {
 } = require("./logic");
 
 const PROFILE_FIELDS =
-  "id, full_name, phone, contact_email, public_contact, designation, organization, country, state_region, constituency, language, selected_domain, booth_number, booth_name, app_role, account_status, created_at, updated_at, last_login_at, additional_profile";
+  "id, full_name, phone, contact_email, public_contact, designation, assembly_constituency, organization, country, state_region, constituency, language, selected_domain, booth_number, booth_name, app_role, account_status, created_at, updated_at, last_login_at, additional_profile";
 
 function schemaError(error) {
   const code = error && error.code;
@@ -66,11 +66,12 @@ function createMemoryRepository(seed = {}) {
 
   return {
     async accessFor(user) {
-      const phone = phoneFromUser(user);
       const profile = state.profiles.find((item) => item.id === user.id) || null;
-      if (phone && adminPhones().has(phone) && profile && profile.app_role !== "admin") {
+      if (isListedAdmin(user) && profile && profile.app_role !== "admin") {
         profile.app_role = "admin";
         profile.account_status = profile.account_status || "active";
+        const email = emailFromUser(user);
+        if (email) profile.contact_email = email;
       }
       const admin = Boolean(profile && profile.app_role === "admin" && profile.account_status !== "inactive");
       return { admin, profile };
@@ -80,6 +81,15 @@ function createMemoryRepository(seed = {}) {
     },
     async listClients(query) {
       return listPeople(state.profiles.filter((profile) => profile.app_role !== "admin"), query);
+    },
+    async listLeaderProfiles(query) {
+      const listed = listPeople(state.profiles, query);
+      return {
+        page: listed.page,
+        pageSize: listed.pageSize,
+        total: listed.total,
+        profiles: listed.clients,
+      };
     },
     async getClient(id) {
       const profile = state.profiles.find((item) => item.id === id);
@@ -160,6 +170,7 @@ function createMemoryRepository(seed = {}) {
     async report(kind, query) {
       const overview = summarize(snapshot(), query && query.range);
       if (kind === "clients") return { kind, columns: clientCsvColumns(), rows: clientCsvRows(state.profiles) };
+      if (kind === "profiles") return { kind, columns: profileCsvColumns(), rows: state.profiles.map(publicProfile) };
       if (kind === "purchases" || kind === "revenue") {
         return { kind, columns: purchaseCsvColumns(), rows: filterPurchases(purchaseRecords(snapshot()), query) };
       }
@@ -187,7 +198,7 @@ function listPeople(profiles, query) {
     if (query && query.from && new Date(profile.created_at) < new Date(query.from)) return false;
     if (query && query.to && new Date(profile.created_at) > new Date(query.to)) return false;
     if (!term) return true;
-    return `${profile.full_name} ${profile.phone} ${profile.public_contact} ${profile.contact_email} ${profile.id}`
+    return `${profile.full_name} ${profile.phone} ${profile.public_contact} ${profile.contact_email} ${profile.organization} ${profile.designation} ${profile.assembly_constituency} ${profile.state_region} ${profile.constituency} ${profile.booth_name} ${profile.id}`
       .toLowerCase()
       .includes(term);
   });
@@ -232,12 +243,31 @@ function clientCsvColumns() {
   return ["id", "fullName", "phone", "email", "status", "role", "createdAt", "lastLoginAt"];
 }
 
+function profileCsvColumns() {
+  return [
+    "id",
+    "fullName",
+    "phone",
+    "email",
+    "publicContact",
+    "organization",
+    "designation",
+    "assemblyConstituency",
+    "country",
+    "state",
+    "constituency",
+    "boothNumber",
+    "boothName",
+    "updatedAt",
+  ];
+}
+
 function clientCsvRows(profiles) {
   return profiles.map(publicProfile);
 }
 
 function purchaseCsvColumns() {
-  return ["id", "clientName", "clientEmail", "product", "purchasedAt", "quantity", "amount", "tax", "discount", "finalAmount", "paymentMethod", "paymentStatus", "orderStatus", "reference", "currency"];
+  return ["id", "clientName", "clientEmail", "clientPhone", "product", "purchasedAt", "quantity", "unitPrice", "amount", "tax", "discount", "finalAmount", "paymentMethod", "paymentStatus", "orderStatus", "reference", "currency"];
 }
 
 function paymentSummary(rows) {
@@ -258,8 +288,8 @@ function metricRows(cards) {
 function createSupabaseRepository() {
   return {
     async accessFor(user) {
+      const bootstrap = isListedAdmin(user);
       const phone = phoneFromUser(user);
-      const bootstrap = Boolean(phone && adminPhones().has(phone));
       if (!isUuid(user.id)) {
         if (process.env.OTP_PROVIDER === "demo") {
           const demo = await loadDemoProfile(phone);
@@ -285,8 +315,15 @@ function createSupabaseRepository() {
         throw err;
       }
       if (bootstrap && profile && profile.app_role !== "admin") {
-        const { error } = await db().from("profiles").update({ app_role: "admin" }).eq("id", user.id);
-        if (!error) profile.app_role = "admin";
+        const email = emailFromUser(user);
+        const patch = { app_role: "admin", account_status: "active" };
+        if (email) patch.contact_email = email;
+        const { error } = await db().from("profiles").update(patch).eq("id", user.id);
+        if (!error) {
+          profile.app_role = "admin";
+          profile.account_status = "active";
+          if (email) profile.contact_email = email;
+        }
       }
       const admin = Boolean(profile && profile.app_role === "admin" && profile.account_status !== "inactive");
       return { admin, profile };
@@ -303,7 +340,7 @@ function createSupabaseRepository() {
           selectLimited("profiles", "created_at", (q) => q.eq("app_role", "client").gte("created_at", since)),
           selectLimited(
             "merchandise_orders",
-            "id, profile_id, product_name, quantity, status, created_at, contact_name, campaign_line",
+            "id, profile_id, product_slug, product_name, quantity, status, created_at, contact_name, contact_phone, contact_email, unit_price_paise, line_total_paise, campaign_line",
             (q) => q.gte("created_at", since),
           ),
           selectLimited(
@@ -314,7 +351,7 @@ function createSupabaseRepository() {
           selectLimited("profiles", PROFILE_FIELDS, (q) => q.eq("app_role", "client").order("created_at", { ascending: false }), 8),
           selectLimited(
             "merchandise_orders",
-            "id, profile_id, product_name, quantity, status, created_at, contact_name, campaign_line",
+            "id, profile_id, product_slug, product_name, quantity, status, created_at, contact_name, contact_phone, contact_email, unit_price_paise, line_total_paise, campaign_line",
             (q) => q.order("created_at", { ascending: false }),
             8,
           ),
@@ -387,12 +424,21 @@ function createSupabaseRepository() {
     async listClients(query) {
       return listProfiles(query, true);
     },
+    async listLeaderProfiles(query) {
+      const listed = await listProfiles(query, false);
+      return {
+        page: listed.page,
+        pageSize: listed.pageSize,
+        total: listed.total,
+        profiles: listed.clients,
+      };
+    },
     async getClient(id) {
       if (!isUuid(id)) return null;
       const profile = await loadProfile(id);
       if (!profile || profile.app_role === "admin") return null;
       const [orders, websites, team, volunteers, voters, events, volunteerActivity] = await Promise.all([
-        selectLimited("merchandise_orders", "id, profile_id, product_name, quantity, status, created_at, contact_name, campaign_line", (q) => q.eq("profile_id", id), 200),
+        selectLimited("merchandise_orders", "id, profile_id, product_slug, product_name, quantity, status, created_at, contact_name, contact_phone, contact_email, unit_price_paise, line_total_paise, campaign_line", (q) => q.eq("profile_id", id), 200),
         selectLimited("websites", "id, user_id, website_name, status, payment_verified, created_at, updated_at, published_at", (q) => q.eq("user_id", id), 20),
         countWhere("team_members", (q) => q.eq("owner_user_id", id)),
         countWhere("volunteers", (q) => q.eq("owner_user_id", id)),
@@ -518,6 +564,10 @@ function createSupabaseRepository() {
         const people = await selectLimited("profiles", PROFILE_FIELDS, (q) => q.order("created_at", { ascending: false }), 1000);
         return { kind, columns: clientCsvColumns(), rows: people.rows.map(publicProfile), truncated: people.truncated };
       }
+      if (kind === "profiles") {
+        const people = await selectLimited("profiles", PROFILE_FIELDS, (q) => q.order("updated_at", { ascending: false }), 1000);
+        return { kind, columns: profileCsvColumns(), rows: people.rows.map(publicProfile), truncated: people.truncated };
+      }
       if (kind === "purchases" || kind === "revenue") {
         const loaded = await loadCommerce();
         return { kind, columns: purchaseCsvColumns(), rows: filterPurchases(purchaseRecords(loaded), query), truncated: loaded.truncated };
@@ -564,7 +614,7 @@ async function listProfiles(query, clientsOnly) {
   if (term) {
     const pattern = `"%${term}%"`;
     request = request.or(
-      `full_name.ilike.${pattern},phone.ilike.${pattern},public_contact.ilike.${pattern},contact_email.ilike.${pattern}`,
+      `full_name.ilike.${pattern},phone.ilike.${pattern},public_contact.ilike.${pattern},contact_email.ilike.${pattern},organization.ilike.${pattern},designation.ilike.${pattern},assembly_constituency.ilike.${pattern},state_region.ilike.${pattern},constituency.ilike.${pattern},booth_name.ilike.${pattern}`,
     );
   }
   const from = (page.page - 1) * page.pageSize;
@@ -646,7 +696,7 @@ async function loadCommerce() {
     selectLimited("profiles", "id, full_name, contact_email, app_role, created_at", (q) => q, 1000),
     selectLimited(
       "merchandise_orders",
-      "id, profile_id, product_name, quantity, status, created_at, contact_name, campaign_line",
+      "id, profile_id, product_slug, product_name, quantity, status, created_at, contact_name, contact_phone, contact_email, unit_price_paise, line_total_paise, campaign_line",
       (q) => q.order("created_at", { ascending: false }),
       1000,
     ),

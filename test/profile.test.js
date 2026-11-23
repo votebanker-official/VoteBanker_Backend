@@ -65,6 +65,35 @@ test("a blank booth value does not erase a saved booth", () => {
   assert.equal(result.update.designation, "72 - Dharwad");
 });
 
+test("role, assembly name, and email save in their own fields", () => {
+  const result = buildProfileUpdate(
+    {
+      full_name: "A Leader",
+      designation: "MLA",
+      assembly_constituency: "72 - Dharwad",
+      organization: "Indian National Congress",
+      contact_email: "leader@example.com",
+      public_contact: "9876543210",
+      state_region: "Karnataka",
+      constituency: "Dharwad",
+      booth_number: "12",
+      booth_name: "Town Hall",
+    },
+    user,
+  );
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.update.designation, "MLA");
+  assert.equal(result.update.assembly_constituency, "72 - Dharwad");
+  assert.equal(result.update.organization, "Indian National Congress");
+  assert.equal(result.update.contact_email, "leader@example.com");
+  assert.equal(result.update.public_contact, "9876543210");
+  assert.equal(result.update.state_region, "Karnataka");
+  assert.equal(result.update.constituency, "Dharwad");
+  assert.equal(result.update.booth_number, "12");
+  assert.equal(result.update.booth_name, "Town Hall");
+});
+
 test("a profile save without a photo does not clear the photo path", () => {
   const result = buildProfileUpdate({ full_name: "A Leader" }, user);
   assert.equal(Object.hasOwn(result.update, "profile_photo_path"), false);

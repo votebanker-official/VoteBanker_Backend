@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { catalog, validateOrder, priceSlabsFor } = require("../src/merchandise");
+const { catalog, validateOrder, fillOrderContact, priceSlabsFor } = require("../src/merchandise");
 const { quoteMerchandise } = require("../src/merchandise_pricing");
 
 test("the catalog covers the campaign merchandise set", () => {
@@ -39,17 +39,18 @@ test("an order keeps only the line and choices the user supplied", () => {
   assert.equal(result.value.product_name, "Cap");
   assert.equal(result.value.quantity, 100);
   assert.equal(result.value.unit_price_paise, undefined);
-  assert.equal(result.value.status, "requested");
+  assert.equal(result.value.status, "pending");
 });
 
-test("a blank print line is rejected", () => {
+test("a blank print line is optional", () => {
   const result = validateOrder({
     product_slug: "mug",
     campaign_line: "   ",
     quantity: 50,
     contact_name: "Meera Rao",
   });
-  assert.equal(result.error, "invalid_line");
+  assert.equal(result.error, undefined);
+  assert.equal(result.value.campaign_line, "");
 });
 
 test("an optional print photo is kept as base64", () => {
@@ -127,4 +128,51 @@ test("each product keeps its own slabs and a missing price stays unset", () => {
   assert.equal(priceSlabsFor("keychain")[0].unit_price_paise, 4000);
   assert.equal(priceSlabsFor("gift-box")[0].unit_price_paise, 5000);
   assert.equal(priceSlabsFor("cap", [{ min_quantity: 50, unit_price_paise: 1500 }])[0].unit_price_paise, 1500);
+});
+
+test("a booking copies the signed-in profile when the form omits contact details", () => {
+  const parsed = validateOrder({
+    product_slug: "cap",
+    quantity: 50,
+    contact_name: "Leader",
+  });
+  const filled = fillOrderContact(parsed.value, {
+    full_name: "Vote Banker",
+    contact_email: "leader@example.com",
+    public_contact: "+919800000001",
+    phone: "+919800000099",
+  });
+  assert.equal(filled.error, undefined);
+  assert.equal(filled.value.contact_name, "Vote Banker");
+  assert.equal(filled.value.contact_email, "leader@example.com");
+  assert.equal(filled.value.contact_phone, "+919800000001");
+  assert.equal(filled.value.status, "pending");
+
+  const kept = fillOrderContact(
+    { contact_name: "Meera Rao", contact_email: "meera@example.com", contact_phone: "+919800000000" },
+    { full_name: "Someone Else", contact_email: "other@example.com", phone: "+911111111111" },
+  );
+  assert.equal(kept.value.contact_name, "Meera Rao");
+  assert.equal(kept.value.contact_email, "meera@example.com");
+  assert.equal(kept.value.contact_phone, "+919800000000");
+});
+
+test("an order keeps the buyer email and rejects a bad one", () => {
+  const kept = validateOrder({
+    product_slug: "mug",
+    quantity: 50,
+    contact_name: "Meera Rao",
+    contact_email: " meera@example.com ",
+  });
+  assert.equal(kept.error, undefined);
+  assert.equal(kept.value.contact_email, "meera@example.com");
+  assert.equal(kept.value.status, "pending");
+
+  const bad = validateOrder({
+    product_slug: "mug",
+    quantity: 50,
+    contact_name: "Meera Rao",
+    contact_email: "not-an-email",
+  });
+  assert.equal(bad.error, "invalid_email");
 });

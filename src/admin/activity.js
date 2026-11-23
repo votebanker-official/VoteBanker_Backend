@@ -1,5 +1,5 @@
 const { getSupabaseAdmin } = require("../lib/clients");
-const { adminPhones, isUuid, phoneFromUser } = require("./access");
+const { emailFromUser, isListedAdmin, isUuid } = require("./access");
 
 function dayKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
@@ -46,8 +46,12 @@ async function noteLogin(user) {
     if (!user || !isUuid(user.id)) return;
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) return;
     const patch = { last_login_at: new Date().toISOString() };
-    const phone = phoneFromUser(user);
-    if (phone && adminPhones().has(phone)) patch.app_role = "admin";
+    const email = emailFromUser(user);
+    if (email) patch.contact_email = email;
+    if (isListedAdmin(user)) {
+      patch.app_role = "admin";
+      patch.account_status = "active";
+    }
     const { error } = await getSupabaseAdmin().from("profiles").update(patch).eq("id", user.id);
     if (error) {
       console.error(`login stamp skipped: ${error.code || error.message}`);

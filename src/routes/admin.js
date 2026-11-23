@@ -2,8 +2,9 @@ const express = require("express");
 
 const { authenticate } = require("../admin/access");
 const { createSupabaseRepository, csvFor } = require("../admin/repository");
+const { listBlueTikRequests } = require("./blue_tik");
 
-const REPORTS = new Set(["overview", "clients", "revenue", "purchases", "engagement", "campaigns"]);
+const REPORTS = new Set(["overview", "clients", "profiles", "revenue", "purchases", "engagement", "campaigns"]);
 
 function createAdminRouter(options = {}) {
   const router = express.Router();
@@ -45,6 +46,22 @@ function createAdminRouter(options = {}) {
   router.get("/clients", async (req, res, next) => {
     try {
       res.json(await repo.listClients(req.query));
+    } catch (err) {
+      sendAdminError(res, err, next);
+    }
+  });
+
+  router.get("/profiles", async (req, res, next) => {
+    try {
+      res.json(await repo.listLeaderProfiles(req.query));
+    } catch (err) {
+      sendAdminError(res, err, next);
+    }
+  });
+
+  router.get("/blue-tik", async (req, res, next) => {
+    try {
+      res.json(await listBlueTikRequests(req.query));
     } catch (err) {
       sendAdminError(res, err, next);
     }

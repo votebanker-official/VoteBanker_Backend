@@ -55,7 +55,7 @@ function validateOrder(body, options = {}) {
   }
 
   const campaignLine = String(source.campaign_line || "").trim();
-  if (!campaignLine || campaignLine.length > 80) {
+  if (campaignLine.length > 80) {
     return { error: "invalid_line" };
   }
 
@@ -84,6 +84,11 @@ function validateOrder(body, options = {}) {
     return { error: "invalid_phone" };
   }
 
+  const contactEmail = String(source.contact_email || "").trim();
+  if (contactEmail && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail) || contactEmail.length > 160)) {
+    return { error: "invalid_email" };
+  }
+
   // Optional print photo as base64 (or data-URL). Cap keeps order rows reasonable.
   let campaignPhoto = String(source.campaign_photo || "").trim();
   if (campaignPhoto) {
@@ -109,12 +114,34 @@ function validateOrder(body, options = {}) {
     quantity,
     contact_name: contactName,
     contact_phone: contactPhone,
+    contact_email: contactEmail,
     notes: String(source.notes || "").trim().slice(0, 400),
-    status: "requested",
+    status: "pending",
   };
   if (!priced.error) {
     value.unit_price_paise = priced.unit_price_paise;
     value.line_total_paise = priced.line_total_paise;
+  }
+  return { value };
+}
+
+function fillOrderContact(value, profile) {
+  const source = profile && typeof profile === "object" ? profile : {};
+  const profileName = String(source.full_name || "").trim();
+  const profileEmail = String(source.contact_email || "").trim();
+  const profilePhone = String(source.public_contact || source.phone || "").trim();
+  const currentName = String(value.contact_name || "").trim();
+  if (!currentName || currentName.toLowerCase() === "leader") {
+    if (profileName) value.contact_name = profileName.slice(0, 80);
+  }
+  if (!String(value.contact_email || "").trim() && profileEmail) {
+    value.contact_email = profileEmail.slice(0, 160);
+  }
+  if (!String(value.contact_phone || "").trim() && profilePhone) {
+    value.contact_phone = profilePhone.slice(0, 20);
+  }
+  if (!String(value.contact_name || "").trim()) {
+    return { error: "invalid_name" };
   }
   return { value };
 }
@@ -188,12 +215,23 @@ function createMerchandiseRouter(options = {}) {
     }
 
     const userId = await userIdFromAuth(fetchImpl, supabaseUrl, publishableKey, req.headers.authorization);
-    const row = { ...parsed.value };
-    if (userId) {
-      row.profile_id = userId;
+    if (!userId) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
     }
+    const profile = await profileContact(fetchImpl, supabaseUrl, secretKey, userId);
+    const filled = fillOrderContact(parsed.value, profile);
+    if (filled.error) {
+      res.status(400).json({ error: filled.error });
+      return;
+    }
+    const row = { ...filled.value, profile_id: userId };
 
     let saved = await insertOrder(fetchImpl, supabaseUrl, secretKey, row);
+    if (saved.unknownColumn && Object.prototype.hasOwnProperty.call(row, "contact_email")) {
+      delete row.contact_email;
+      saved = await insertOrder(fetchImpl, supabaseUrl, secretKey, row);
+    }
     if (saved.unknownColumn) {
       delete row.unit_price_paise;
       delete row.line_total_paise;
@@ -314,6 +352,18 @@ async function seedProducts(fetchImpl, supabaseUrl, secretKey) {
   });
 }
 
+async function profileContact(fetchImpl, supabaseUrl, secretKey, userId) {
+  if (!supabaseUrl || !secretKey || !userId) return null;
+  const response = await supabaseFetch(
+    fetchImpl,
+    supabaseUrl,
+    secretKey,
+    `/rest/v1/profiles?select=full_name,contact_email,phone,public_contact&id=eq.${encodeURIComponent(userId)}&limit=1`,
+  );
+  if (!response.ok || !Array.isArray(response.body)) return null;
+  return response.body[0] || null;
+}
+
 async function readOrders(fetchImpl, supabaseUrl, secretKey, userId) {
   const response = await supabaseFetch(
     fetchImpl,
@@ -410,6 +460,7 @@ async function supabaseFetch(fetchImpl, supabaseUrl, secretKey, path, options = 
 module.exports = {
   catalog,
   validateOrder,
+  fillOrderContact,
   quoteMerchandise,
   priceSlabsFor,
   createMerchandiseRouter,

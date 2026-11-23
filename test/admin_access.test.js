@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const express = require("express");
 
+const { isListedAdmin } = require("../src/admin/access");
 const { createAdminRouter } = require("../src/routes/admin");
 const { createMemoryRepository } = require("../src/admin/repository");
 const { buildProfileUpdate } = require("../src/routes/profile");
@@ -37,6 +38,12 @@ function seed() {
         contact_email: "ravi@example.com",
         public_contact: "+919800000002",
         designation: "MLA",
+        assembly_constituency: "72 - Dharwad",
+        organization: "Indian National Congress",
+        state_region: "Karnataka",
+        constituency: "Dharwad",
+        booth_number: "12",
+        booth_name: "Town Hall",
         app_role: "client",
         account_status: "active",
         created_at: "2026-11-10T00:00:00.000Z",
@@ -100,6 +107,16 @@ async function request(app, method, path, payload) {
   }
 }
 
+test("the admin mailbox is recognized without a phone number", () => {
+  assert.equal(isListedAdmin({ email: "VoteBanker.com@gmail.com" }), true);
+  assert.equal(
+    isListedAdmin({ user_metadata: { contact_email: "votebanker.com@gmail.com" }, email: "facebook.1@social.votebanker.app" }),
+    true,
+  );
+  assert.equal(isListedAdmin({ email: "facebook.1@social.votebanker.app" }), false);
+  assert.equal(isListedAdmin({ email: "someone@example.com" }), false);
+});
+
 test("admin routes reject missing and non-admin sessions", async () => {
   const anonymous = await request(appFor(null), "GET", "/api/admin/overview");
   assert.equal(anonymous.status, 401);
@@ -118,6 +135,16 @@ test("admin overview and client profile use stored records", async () => {
   assert.equal(overview.body.cards.pendingPayments, 1);
   assert.equal(overview.body.cards.totalRevenue, 0);
   assert.equal(overview.body.recentRegistrations[0].fullName, "Ravi Leader");
+
+  const profiles = await request(appFor(adminId), "GET", "/api/admin/profiles?q=Dharwad");
+  assert.equal(profiles.status, 200);
+  assert.equal(profiles.body.total, 1);
+  assert.equal(profiles.body.profiles[0].fullName, "Ravi Leader");
+  assert.equal(profiles.body.profiles[0].designation, "MLA");
+  assert.equal(profiles.body.profiles[0].assemblyConstituency, "72 - Dharwad");
+  assert.equal(profiles.body.profiles[0].organization, "Indian National Congress");
+  assert.equal(profiles.body.profiles[0].state, "Karnataka");
+  assert.equal(profiles.body.profiles[0].constituency, "Dharwad");
 
   const profile = await request(appFor(adminId), "GET", `/api/admin/clients/${clientId}`);
   assert.equal(profile.status, 200);

@@ -69,8 +69,15 @@ function websitePaymentState(website) {
 }
 
 function orderAmount(order) {
+  const paise = Number(order && order.line_total_paise);
+  if (Number.isFinite(paise) && paise > 0) return paise / 100;
   const amount = Number(order && (order.amount ?? order.final_amount));
   return Number.isFinite(amount) ? amount : 0;
+}
+
+function unitPrice(order) {
+  const paise = Number(order && order.unit_price_paise);
+  return Number.isFinite(paise) && paise > 0 ? paise / 100 : 0;
 }
 
 function slicePage(rows, page, pageSize) {
@@ -142,7 +149,11 @@ function matchesText(profile, term) {
     profile.contact_email,
     profile.id,
     profile.designation,
+    profile.assembly_constituency,
     profile.organization,
+    profile.state_region,
+    profile.constituency,
+    profile.booth_name,
   ]
     .join(" ")
     .toLowerCase();
@@ -167,6 +178,7 @@ function publicProfile(profile) {
     email: source.contact_email || "",
     publicContact: source.public_contact || "",
     designation: source.designation || "",
+    assemblyConstituency: source.assembly_constituency || "",
     organization: source.organization || "",
     country: source.country || "",
     state: source.state_region || "",
@@ -350,11 +362,14 @@ function purchaseRecords(sources) {
     rows.push({
       id: order.id,
       clientId: order.profile_id || "",
-      clientName: (profile && profile.full_name) || order.contact_name || "",
-      clientEmail: (profile && profile.contact_email) || "",
+      clientName: order.contact_name || (profile && profile.full_name) || "",
+      clientEmail: order.contact_email || (profile && profile.contact_email) || "",
+      clientPhone: order.contact_phone || (profile && (profile.public_contact || profile.phone)) || "",
       product: order.product_name || "",
+      productId: order.product_slug || "",
       purchasedAt: order.created_at,
       quantity: order.quantity || 1,
+      unitPrice: unitPrice(order),
       amount,
       tax: Number(order.tax) || 0,
       discount: Number(order.discount) || 0,
@@ -376,6 +391,7 @@ function purchaseRecords(sources) {
       clientId: site.user_id || "",
       clientName: (profile && profile.full_name) || "",
       clientEmail: (profile && profile.contact_email) || "",
+      clientPhone: (profile && (profile.public_contact || profile.phone)) || "",
       product: "Leader website",
       purchasedAt: site.updated_at || site.created_at,
       quantity: 1,
@@ -408,7 +424,7 @@ function filterPurchases(rows, query) {
     if (start && !inRange(row.purchasedAt, start, null)) return false;
     if (end && !inRange(row.purchasedAt, null, end)) return false;
     if (!term) return true;
-    return `${row.clientName} ${row.clientEmail} ${row.product} ${row.reference} ${row.orderStatus}`
+    return `${row.clientName} ${row.clientEmail} ${row.clientPhone || ""} ${row.product} ${row.reference} ${row.orderStatus}`
       .toLowerCase()
       .includes(term);
   });

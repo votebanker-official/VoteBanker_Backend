@@ -22,9 +22,42 @@ function adminPhones() {
   );
 }
 
+function normalizeEmail(input) {
+  return String(input || "").trim().toLowerCase();
+}
+
+function isLoginAlias(email) {
+  return email.endsWith("@social.votebanker.app") || email.endsWith("@phone.votebanker.app");
+}
+
+// Facebook sign-in has no phone. This mailbox is the admin account.
+function adminEmails() {
+  const configured = String(process.env.ADMIN_EMAILS || "votebanker.com@gmail.com");
+  return new Set(
+    configured
+      .split(",")
+      .map(normalizeEmail)
+      .filter((email) => email.includes("@") && !isLoginAlias(email)),
+  );
+}
+
 function phoneFromUser(user) {
   if (!user) return "";
   return normalizePhone(user.phone || "");
+}
+
+function emailFromUser(user) {
+  if (!user) return "";
+  const meta = user.user_metadata && typeof user.user_metadata === "object" ? user.user_metadata : {};
+  const email = normalizeEmail(meta.contact_email || user.email || "");
+  if (!email || isLoginAlias(email)) return "";
+  return email;
+}
+
+function isListedAdmin(user) {
+  const phone = phoneFromUser(user);
+  const email = emailFromUser(user);
+  return Boolean((phone && adminPhones().has(phone)) || (email && adminEmails().has(email)));
 }
 
 /**
@@ -49,7 +82,8 @@ async function authenticate(req) {
     return {
       id: user.id,
       phone: normalizePhone(user.phone || ""),
-      email: user.email || "",
+      email: emailFromUser(user),
+      user_metadata: user.user_metadata || {},
     };
   } catch (err) {
     console.error(`auth lookup failed: ${err.message || err}`);
@@ -61,7 +95,11 @@ module.exports = {
   UUID_RE,
   isUuid,
   normalizePhone,
+  normalizeEmail,
   adminPhones,
+  adminEmails,
   phoneFromUser,
+  emailFromUser,
+  isListedAdmin,
   authenticate,
 };

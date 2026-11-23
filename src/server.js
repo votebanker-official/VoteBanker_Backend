@@ -25,6 +25,7 @@ const { createSocialConnectionsRouter } = require("./routes/social_connections")
 const { createVolunteersRouter } = require("./volunteers");
 const { createTeamMembersRouter } = require("./team_members");
 const { createAdminRouter } = require("./routes/admin");
+const { createBlueTikRouter } = require("./routes/blue_tik");
 const { createCampaignMediaRouter } = require("./routes/campaign_media");
 
 loadEnv();
@@ -35,7 +36,13 @@ const port = process.env.PORT || 5000;
 // The backend runs behind one trusted reverse proxy in production.
 app.set("trust proxy", 1);
 
-app.use(helmet());
+app.use(
+  helmet({
+    // The Flutter web app calls this API from another local origin.
+    // same-origin would hide every response, including the admin check.
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 // Website drafts can include structured content; media base64 stays off the wire.
 app.use(express.json({ limit: "1mb" }));
 
@@ -66,6 +73,12 @@ function isAllowedOrigin(origin) {
   }
   return false;
 }
+
+app.use((req, res, next) => {
+  // Chrome blocks a localhost page from calling 127.0.0.1 unless this is set.
+  res.setHeader("Access-Control-Allow-Private-Network", "true");
+  next();
+});
 
 app.use(
   cors({
@@ -128,9 +141,13 @@ app.get("/", (_req, res) => {
       "GET /api/volunteers/teams",
       "GET|POST /api/team-members",
       "GET|PATCH|DELETE /api/team-members/:id",
+      "GET /api/auth/me",
       "GET /api/admin/me",
       "GET /api/admin/overview",
       "GET /api/admin/clients",
+      "GET /api/admin/profiles",
+      "POST /api/blue-tik/requests",
+      "GET /api/admin/blue-tik",
       "GET /api/admin/purchases",
       "GET /api/admin/payments",
       "GET /api/campaign-media",
@@ -168,6 +185,7 @@ app.use("/api/social-media", createSocialMediaRouter());
 app.use("/api/volunteers", createVolunteersRouter());
 app.use("/api/team-members", createTeamMembersRouter());
 app.use("/api/admin", createAdminRouter());
+app.use("/api/blue-tik", createBlueTikRouter());
 app.use("/api/campaign-media", createCampaignMediaRouter());
 
 app.use((_req, res) => {

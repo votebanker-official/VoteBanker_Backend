@@ -117,6 +117,38 @@ test("the admin mailbox is recognized without a phone number", () => {
   assert.equal(isListedAdmin({ email: "someone@example.com" }), false);
 });
 
+test("the verified auth email wins over a social-login alias in metadata", () => {
+  assert.equal(
+    isListedAdmin({
+      email: "votebanker.com@gmail.com",
+      user_metadata: { contact_email: "facebook.1@social.votebanker.app" },
+    }),
+    true,
+  );
+});
+
+test("the designated admin stays allow-listed when ADMIN_EMAILS is customized", () => {
+  const previous = process.env.ADMIN_EMAILS;
+  process.env.ADMIN_EMAILS = "another-admin@example.com";
+  try {
+    assert.equal(isListedAdmin({ email: "votebanker.com@gmail.com" }), true);
+  } finally {
+    if (previous === undefined) delete process.env.ADMIN_EMAILS;
+    else process.env.ADMIN_EMAILS = previous;
+  }
+});
+
+test("a listed admin keeps access when their profile row is missing", async () => {
+  const repo = createMemoryRepository();
+  const access = await repo.accessFor({
+    id: adminId,
+    email: "votebanker.com@gmail.com",
+  });
+
+  assert.equal(access.admin, true);
+  assert.equal(access.profile, null);
+});
+
 test("admin routes reject missing and non-admin sessions", async () => {
   const anonymous = await request(appFor(null), "GET", "/api/admin/overview");
   assert.equal(anonymous.status, 401);

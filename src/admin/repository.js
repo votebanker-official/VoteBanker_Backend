@@ -73,7 +73,9 @@ function createMemoryRepository(seed = {}) {
         const email = emailFromUser(user);
         if (email) profile.contact_email = email;
       }
-      const admin = Boolean(profile && profile.app_role === "admin" && profile.account_status !== "inactive");
+      const admin =
+        isListedAdmin(user) ||
+        Boolean(profile && profile.app_role === "admin" && profile.account_status !== "inactive");
       return { admin, profile };
     },
     async overview(range) {
@@ -306,7 +308,10 @@ function createSupabaseRepository() {
       try {
         profile = await loadAccessProfile(user.id);
       } catch (err) {
-        if (err.code === "admin_not_ready" && bootstrap) return { admin: true, degraded: true, profile: null };
+        if (bootstrap) {
+          console.error(`allow-listed admin profile lookup failed: ${err.message || err}`);
+          return { admin: true, degraded: true, profile: null };
+        }
         if (err.code === "admin_not_ready") {
           const forbidden = new Error("forbidden");
           forbidden.code = "forbidden";
@@ -323,9 +328,13 @@ function createSupabaseRepository() {
           profile.app_role = "admin";
           profile.account_status = "active";
           if (email) profile.contact_email = email;
+        } else {
+          console.error(`allow-listed admin promotion failed: ${error.message || error}`);
         }
       }
-      const admin = Boolean(profile && profile.app_role === "admin" && profile.account_status !== "inactive");
+      const admin =
+        bootstrap ||
+        Boolean(profile && profile.app_role === "admin" && profile.account_status !== "inactive");
       return { admin, profile };
     },
     async overview(range) {

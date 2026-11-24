@@ -30,12 +30,10 @@ function isLoginAlias(email) {
   return email.endsWith("@social.votebanker.app") || email.endsWith("@phone.votebanker.app");
 }
 
-// Facebook sign-in has no phone. This mailbox is the admin account.
 function adminEmails() {
-  const configured = String(process.env.ADMIN_EMAILS || "votebanker.com@gmail.com");
+  const configured = String(process.env.ADMIN_EMAILS || "");
   return new Set(
-    configured
-      .split(",")
+    ["votebanker.com@gmail.com", ...configured.split(",")]
       .map(normalizeEmail)
       .filter((email) => email.includes("@") && !isLoginAlias(email)),
   );
@@ -49,9 +47,9 @@ function phoneFromUser(user) {
 function emailFromUser(user) {
   if (!user) return "";
   const meta = user.user_metadata && typeof user.user_metadata === "object" ? user.user_metadata : {};
-  const email = normalizeEmail(meta.contact_email || user.email || "");
-  if (!email || isLoginAlias(email)) return "";
-  return email;
+  return [user.email, meta.contact_email]
+    .map(normalizeEmail)
+    .find((email) => email && !isLoginAlias(email)) || "";
 }
 
 function isListedAdmin(user) {

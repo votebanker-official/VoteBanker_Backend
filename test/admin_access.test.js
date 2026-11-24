@@ -62,6 +62,19 @@ function seed() {
         created_at: "2026-11-12T00:00:00.000Z",
       },
     ],
+    voterPackageRequests: [
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        user_id: clientId,
+        user_name: "Ravi Leader",
+        user_phone: "+919800000002",
+        package_code: "voters_100",
+        voter_count: 100,
+        amount_inr: 100,
+        status: "requested",
+        created_at: new Date().toISOString(),
+      },
+    ],
     websites: [
       {
         id: "55555555-5555-4555-8555-555555555555",
@@ -155,6 +168,23 @@ test("admin routes reject missing and non-admin sessions", async () => {
   const client = await request(appFor(clientId), "GET", "/api/admin/clients");
   assert.equal(client.status, 403);
   assert.equal(client.body.error, "forbidden");
+  const clientVoterLists = await request(appFor(clientId), "GET", "/api/admin/voter-lists");
+  assert.equal(clientVoterLists.status, 403);
+});
+
+test("admin voter lists return requester details and support search", async () => {
+  const result = await request(
+    appFor(adminId),
+    "GET",
+    "/api/admin/voter-lists?range=year&q=Ravi",
+  );
+  assert.equal(result.status, 200);
+  assert.equal(result.body.total, 1);
+  assert.equal(result.body.rows[0].userName, "Ravi Leader");
+  assert.equal(result.body.rows[0].phone, "+919800000002");
+  assert.equal(result.body.rows[0].voterCount, 100);
+  assert.equal(result.body.rows[0].amountInr, 100);
+  assert.equal(result.body.rows[0].status, "requested");
 });
 
 test("admin overview and client profile use stored records", async () => {

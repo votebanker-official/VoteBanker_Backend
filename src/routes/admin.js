@@ -59,6 +59,14 @@ function createAdminRouter(options = {}) {
     }
   });
 
+  router.get("/voter-lists", async (req, res, next) => {
+    try {
+      res.json(await repo.listVoterLists(req.query));
+    } catch (err) {
+      sendAdminError(res, err, next);
+    }
+  });
+
   router.get("/blue-tik", async (req, res, next) => {
     try {
       res.json(await listBlueTikRequests(req.query));

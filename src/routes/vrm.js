@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const clients = require("../lib/clients");
 const { extractFirstVotersFromPdf, extractFromOcrTexts } = require("../vrm/extract_pdf");
 const { parseElectoralOcr, toPreviewRows, DEFAULT_LIMIT } = require("../vrm/parse_electoral_ocr");
+const { createVoterPackageRequest } = require("../vrm/package_requests");
 const {
   importVoterRecords,
   listVoterRecords,
@@ -65,6 +66,25 @@ router.get("/records", optionalUser, async (req, res, next) => {
     const records = await listVoterRecords(ownerId, { q });
     res.json({ success: true, records });
   } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/package-requests", requireUser, async (req, res, next) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const request = await createVoterPackageRequest(req.user, body.packageCode);
+    res.status(201).json({ success: true, request });
+  } catch (err) {
+    if (err.code === "invalid_package") {
+      return res.status(400).json({ success: false, error: err.code });
+    }
+    if (err.code === "profile_details_required") {
+      return res.status(400).json({ success: false, error: err.code });
+    }
+    if (err.code === "unauthorized") {
+      return res.status(401).json({ success: false, error: err.code });
+    }
     next(err);
   }
 });

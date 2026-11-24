@@ -16,6 +16,7 @@ const {
   compareText,
   slicePage,
   series,
+  inRange,
 } = require("./logic");
 
 const PROFILE_FIELDS =
@@ -50,6 +51,7 @@ async function readRows(builder) {
 function createMemoryRepository(seed = {}) {
   const state = {
     profiles: [...(seed.profiles || [])],
+    voterPackageRequests: [...(seed.voterPackageRequests || [])],
     orders: [...(seed.orders || [])],
     websites: [...(seed.websites || [])],
     events: [...(seed.events || [])],
@@ -92,6 +94,22 @@ function createMemoryRepository(seed = {}) {
         total: listed.total,
         profiles: listed.clients,
       };
+    },
+    async listVoterLists(query) {
+      const page = parsePage(query);
+      const term = safeSearch(query && query.q).toLowerCase();
+      const since = rangeStart(parseRange(query && query.range));
+      const rows = state.voterPackageRequests
+        .filter((row) => {
+          if (!inRange(row.created_at, since)) return false;
+          if (!term) return true;
+          return `${row.user_name} ${row.user_phone} ${row.package_code} ${row.status}`
+            .toLowerCase()
+            .includes(term);
+        })
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const paged = slicePage(rows, page.page, page.pageSize);
+      return { ...paged, rows: paged.rows.map(publicVoterPackageRequest) };
     },
     async getClient(id) {
       const profile = state.profiles.find((item) => item.id === id);
@@ -272,6 +290,20 @@ function purchaseCsvColumns() {
   return ["id", "clientName", "clientEmail", "clientPhone", "product", "purchasedAt", "quantity", "unitPrice", "amount", "tax", "discount", "finalAmount", "paymentMethod", "paymentStatus", "orderStatus", "reference", "currency"];
 }
 
+function publicVoterPackageRequest(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    userName: row.user_name,
+    phone: row.user_phone,
+    packageCode: row.package_code,
+    voterCount: Number(row.voter_count),
+    amountInr: Number(row.amount_inr),
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
 function paymentSummary(rows) {
   return {
     successful: rows.filter((row) => row.paymentStatus === "successful").length,
@@ -440,6 +472,33 @@ function createSupabaseRepository() {
         pageSize: listed.pageSize,
         total: listed.total,
         profiles: listed.clients,
+      };
+    },
+    async listVoterLists(query) {
+      const page = parsePage(query);
+      const term = safeSearch(query && query.q);
+      let request = db()
+        .from("vrm_package_requests")
+        .select(
+          "id, user_id, user_name, user_phone, package_code, voter_count, amount_inr, status, created_at",
+          { count: "exact" },
+        )
+        .gte("created_at", rangeStart(parseRange(query && query.range)).toISOString())
+        .order("created_at", { ascending: false });
+      if (term) {
+        request = request.or(
+          `user_name.ilike.%${term}%,user_phone.ilike.%${term}%,package_code.ilike.%${term}%,status.ilike.%${term}%`,
+        );
+      }
+      const from = (page.page - 1) * page.pageSize;
+      const { rows, count } = await readRows(
+        request.range(from, from + page.pageSize - 1),
+      );
+      return {
+        page: page.page,
+        pageSize: page.pageSize,
+        total: count,
+        rows: rows.map(publicVoterPackageRequest),
       };
     },
     async getClient(id) {

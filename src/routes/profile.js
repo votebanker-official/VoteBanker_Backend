@@ -51,7 +51,9 @@ const COLUMNS =
   "id, full_name, phone, selected_domain, language, designation, assembly_constituency, organization, country, " +
   "country_code, state_id, district_id, assembly_constituency_id, " +
   "state_region, constituency, public_contact, contact_email, website_template, social_channels, " +
-  "vrm_requested, booth_number, booth_name, profile_photo_path, created_at, updated_at";
+  "vrm_requested, booth_number, booth_name, profile_photo_path, " +
+  "onboarding_current_step, onboarding_completed_steps, onboarding_completed, onboarding_completed_at, " +
+  "created_at, updated_at";
 const PROFILE_COLUMNS = COLUMNS.replace(
   "created_at, updated_at",
   "additional_profile, created_at, updated_at",
@@ -305,10 +307,165 @@ router.delete("/photo", requireUser, async (req, res, next) => {
   }
 });
 
+const ONBOARDING_ROUTES = new Set([
+  "/profile",
+  "/profile/additional",
+  "/domain",
+  "/website",
+  "/website/info",
+  "/website/questions",
+  "/website/sections",
+  "/website/generating",
+  "/website/preview",
+  "/website/edit",
+  "/website/purchase",
+  "/website/publish",
+  "/social",
+  "/blue-tik",
+  "/voter-lists",
+  "/ready",
+  "/dashboard",
+]);
+
+const ONBOARDING_COMPLETION_ROUTE = "/dashboard";
+
+function normalizeOnboardingRoute(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return ONBOARDING_ROUTES.has(path) ? path : null;
+}
+
+function normalizeCompletedSteps(value) {
+  if (!Array.isArray(value)) return [];
+  const steps = [];
+  const seen = new Set();
+  for (const item of value) {
+    const route = normalizeOnboardingRoute(item);
+    if (!route || seen.has(route) || route === ONBOARDING_COMPLETION_ROUTE) continue;
+    seen.add(route);
+    steps.push(route);
+  }
+  return steps;
+}
+
+function normalizeProgress(profile) {
+  const completedSteps = normalizeCompletedSteps(profile?.onboarding_completed_steps);
+  const completed = profile?.onboarding_completed === true;
+  const current = normalizeOnboardingRoute(profile?.onboarding_current_step);
+  return {
+    current_step: current || (completed ? ONBOARDING_COMPLETION_ROUTE : "/profile"),
+    completed_steps: completedSteps,
+    onboarding_completed: completed,
+    onboarding_completed_at: profile?.onboarding_completed_at || null,
+  };
+}
+
+async function loadProgress(req) {
+  if (process.env.OTP_PROVIDER === "demo") {
+    const account = await demoAccount(req.user.phone);
+    return normalizeProgress(account?.profile || {});
+  }
+  const { data, error } = await getSupabaseAdmin()
+    .from("profiles")
+    .select(
+      "full_name, onboarding_current_step, onboarding_completed_steps, onboarding_completed, onboarding_completed_at"
+    )
+    .eq("id", req.user.id)
+    .maybeSingle();
+  if (error) throw error;
+  const progress = normalizeProgress(data || {});
+  // Backward compatibility for existing registered users: if they already have a
+  // leader profile but no onboarding progress recorded, resume after Leader Profile.
+  if (
+    !progress.onboarding_completed &&
+    progress.current_step === "/profile" &&
+    progress.completed_steps.length === 0 &&
+    typeof data?.full_name === "string" &&
+    data.full_name.trim().length > 0
+  ) {
+    progress.completed_steps = ["/profile"];
+    progress.current_step = "/profile/additional";
+  }
+  return progress;
+}
+
+async function saveProgress(req, body) {
+  const existing = await loadProgress(req);
+  const completedSteps = new Set(existing.completed_steps);
+  for (const step of normalizeCompletedSteps(body.completed_steps)) completedSteps.add(step);
+  const completedStep = normalizeOnboardingRoute(body.completed_step);
+  if (completedStep && completedStep !== ONBOARDING_COMPLETION_ROUTE) {
+    completedSteps.add(completedStep);
+  }
+
+  const requestedCurrent = normalizeOnboardingRoute(body.current_step);
+  const requestedComplete = body.onboarding_completed === true;
+  const onboardingCompleted =
+    requestedComplete ||
+    existing.onboarding_completed ||
+    requestedCurrent === ONBOARDING_COMPLETION_ROUTE;
+  const currentStep = onboardingCompleted
+    ? ONBOARDING_COMPLETION_ROUTE
+    : requestedCurrent || existing.current_step || "/profile";
+
+  const update = {
+    onboarding_current_step: currentStep,
+    onboarding_completed_steps: Array.from(completedSteps),
+    onboarding_completed: onboardingCompleted,
+    onboarding_completed_at:
+      onboardingCompleted
+        ? existing.onboarding_completed_at || new Date().toISOString()
+        : null,
+  };
+
+  if (process.env.OTP_PROVIDER === "demo") {
+    const account = await demoAccount(req.user.phone);
+    const profile = { ...(account?.profile || {}), ...update, id: req.user.id };
+    await saveDemoAccount(
+      req.user.phone,
+      profile,
+      account?.last_route || currentStep
+    );
+    return normalizeProgress(profile);
+  }
+
+  const { data, error } = await getSupabaseAdmin()
+    .from("profiles")
+    .upsert({ id: req.user.id, ...update }, { onConflict: "id" })
+    .select(
+      "onboarding_current_step, onboarding_completed_steps, onboarding_completed, onboarding_completed_at"
+    )
+    .single();
+  if (error) throw error;
+  return normalizeProgress(data);
+}
+
+router.get("/progress", requireUser, async (req, res, next) => {
+  try {
+    const progress = await loadProgress(req);
+    res.json({ progress });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/progress", requireUser, async (req, res, next) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const progress = await saveProgress(req, body);
+    res.json({ progress });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
 module.exports.buildProfileUpdate = buildProfileUpdate;
 module.exports.publicPhotoUrl = publicPhotoUrl;
 module.exports.photoExtension = photoExtension;
+module.exports.normalizeProgress = normalizeProgress;
 
 async function trackProfileChange(req) {
   const body = req.body && typeof req.body === "object" ? req.body : {};

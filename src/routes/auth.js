@@ -41,10 +41,146 @@ const otpLimiter = rateLimit({
   skip: () => process.env.OTP_PROVIDER === "demo",
 });
 
+const DEFAULT_COUNTRY_CODE = "+91";
+
 function normalizePhone(input) {
   if (typeof input !== "string") return null;
-  const phone = input.replace(/[\s-]/g, "");
-  return E164.test(phone) ? phone : null;
+  const cleaned = input.trim().replace(/[\s\-()]/g, "");
+  if (!cleaned) return null;
+
+  let candidate = cleaned;
+  if (cleaned.startsWith("+")) {
+    candidate = cleaned;
+  } else if (/^\d{10}$/.test(cleaned)) {
+    candidate = `${DEFAULT_COUNTRY_CODE}${cleaned}`;
+  } else if (/^0\d{10}$/.test(cleaned)) {
+    candidate = `${DEFAULT_COUNTRY_CODE}${cleaned.slice(1)}`;
+  } else if (/^91\d{10}$/.test(cleaned)) {
+    candidate = `+${cleaned}`;
+  } else {
+    return null;
+  }
+
+  return E164.test(candidate) ? candidate : null;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_MIN = 8;
+const SCRYPT_KEYLEN = 64;
+
+function normalizeEmail(input) {
+  if (typeof input !== "string") return null;
+  const email = input.trim().toLowerCase();
+  if (!email || email.length > 160 || !EMAIL_RE.test(email)) return null;
+  return email;
+}
+
+function normalizeIdentifier(input) {
+  if (typeof input !== "string") return { type: null, value: null };
+  const raw = input.trim();
+  if (!raw) return { type: null, value: null };
+  if (raw.includes("@")) return { type: "email", value: normalizeEmail(raw) };
+  return { type: "mobile", value: normalizePhone(raw) };
+}
+
+function validatePassword(password) {
+  if (typeof password !== "string") return "invalid_password";
+  if (password.length < PASSWORD_MIN) return "password_too_short";
+  if (password.length > 128) return "invalid_password";
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return "password_weak";
+  return null;
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const derived = crypto.scryptSync(password, salt, SCRYPT_KEYLEN).toString("hex");
+  return `scrypt$${salt}$${derived}`;
+}
+
+function verifyPassword(password, storedHash) {
+  if (typeof storedHash !== "string") return false;
+  const parts = storedHash.split("$");
+  if (parts.length !== 3 || parts[0] !== "scrypt") return false;
+  const [, salt, expectedHex] = parts;
+  if (!salt || !expectedHex) return false;
+  const expected = Buffer.from(expectedHex, "hex");
+  const actual = crypto.scryptSync(password, salt, expected.length);
+  if (actual.length !== expected.length) return false;
+  return crypto.timingSafeEqual(actual, expected);
+}
+
+async function findPublicUserByEmail(email) {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("users")
+    .select("id, email, mobile, hashed_password, created_at")
+    .ilike("email", email)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+async function findPublicUserByMobile(mobile) {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("users")
+    .select("id, email, mobile, hashed_password, created_at")
+    .eq("mobile", mobile)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+async function findPublicUserByIdentifier(identifier) {
+  const { type, value } = normalizeIdentifier(identifier);
+  if (!type || !value) return { type, value, user: null };
+  const user = type === "email"
+    ? await findPublicUserByEmail(value)
+    : await findPublicUserByMobile(value);
+  return { type, value, user };
+}
+
+function publicUserResponse(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    mobile: user.mobile,
+    created_at: user.created_at,
+  };
+}
+
+function sessionResponse(session, user, account) {
+  const meta = user && user.user_metadata && typeof user.user_metadata === "object"
+    ? user.user_metadata
+    : {};
+  return {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_at: session.expires_at,
+    user: {
+      id: user.id,
+      phone: account?.mobile || user.phone || meta.mobile || "",
+      email: account?.email || meta.contact_email || user.email || "",
+      full_name: meta.name || meta.full_name || "",
+      avatar_url: meta.avatar_url || "",
+    },
+  };
+}
+
+async function ensureProfileForAccount(userId, { fullName, phone, email }) {
+  const admin = getSupabaseAdmin();
+  const payload = { id: userId };
+  if (typeof fullName === "string" && fullName.trim()) {
+    payload.full_name = fullName.trim().slice(0, 120);
+  }
+  if (typeof phone === "string" && phone.trim()) {
+    payload.phone = phone.trim();
+  }
+  if (typeof email === "string" && email.trim()) {
+    payload.contact_email = email.trim().toLowerCase();
+  }
+  const { error } = await admin.from("profiles").upsert(payload, { onConflict: "id" });
+  if (error) throw error;
 }
 
 function demoPhoneNumbers() {
@@ -298,9 +434,6 @@ router.get("/oauth/:provider/start", (req, res) => {
   const returnTo = safeReturnTo(req.query.return_to);
   if (!returnTo) return res.status(400).json({ error: "invalid_return" });
   if (!providerConfigured(provider)) {
-    // #region agent log
-    fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'90cc82'},body:JSON.stringify({sessionId:'90cc82',runId:'pre-fix',hypothesisId:'A',location:'auth.js:oauth-start',message:'provider not configured',data:{provider,demo:isDemoOtpEnabled(),port:String(process.env.PORT||''),reqHost:String(req.get('host')||'')},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     // Same demo path as WhatsApp OTP: local sign-in without Meta/Google apps.
     if (isDemoOtpEnabled() && (provider === "facebook" || provider === "google")) {
       const session = demoSocialSession(provider);
@@ -450,9 +583,6 @@ async function finishGoogleIdToken(req, res) {
 }
 
 async function oauthCallback(req, res, next) {
-  // #region agent log
-  fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'90cc82'},body:JSON.stringify({sessionId:'90cc82',runId:'pre-fix',hypothesisId:'C-D',location:'auth.js:oauth-callback',message:'oauth callback hit',data:{method:req.method,path:req.path,hasCode:Boolean(req.query&&req.query.code),hasState:Boolean(req.query&&req.query.state),oauthError:String((req.query&&req.query.error)||'').slice(0,80),hasIdToken:Boolean(req.body&&req.body.id_token)},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   if (req.method === "POST" && req.body && typeof req.body.id_token === "string") {
     return finishGoogleIdToken(req, res);
   }
@@ -523,9 +653,6 @@ async function oauthCallback(req, res, next) {
     res.redirect(`${landing}?auth_ticket=${encodeURIComponent(ticket)}`);
   } catch (err) {
     console.error(`social sign-in failed: ${err.code || err.message}`);
-    // #region agent log
-    fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'90cc82'},body:JSON.stringify({sessionId:'90cc82',runId:'pre-fix',hypothesisId:'D',location:'auth.js:oauth-callback',message:'social sign-in failed',data:{code:String(err.code||''),providerStatus:err.providerStatus||0,providerError:String(err.providerError||'').slice(0,80),providerDescription:String(err.providerDescription||'').slice(0,180)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (returnTo) return redirectWithError(res, returnTo, "social_failed");
     next(err);
   }
@@ -679,6 +806,191 @@ router.post("/otp/verify", otpLimiter, async (req, res, next) => {
     // Twilio returns 404 when the code expired or no verification is pending.
     if (err.status === 404) return res.status(401).json({ error: "code_expired" });
     if (err.status === 429) return res.status(429).json({ error: "too_many_requests" });
+    next(err);
+  }
+});
+
+router.post("/register", otpLimiter, async (req, res, next) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const email = normalizeEmail(body.email);
+    const mobile = normalizePhone(body.mobile);
+    const password = typeof body.password === "string" ? body.password : "";
+    const confirmPassword = typeof body.confirm_password === "string" ? body.confirm_password : "";
+    const termsAccepted = body.terms_accepted === true;
+
+    if (!email) return res.status(400).json({ error: "invalid_email" });
+    if (!mobile) return res.status(400).json({ error: "invalid_phone" });
+    const passwordError = validatePassword(password);
+    if (passwordError) return res.status(400).json({ error: passwordError });
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: "password_mismatch" });
+    }
+    if (!termsAccepted) {
+      return res.status(400).json({ error: "terms_required" });
+    }
+
+    const [existingEmail, existingMobile] = await Promise.all([
+      findPublicUserByEmail(email),
+      findPublicUserByMobile(mobile),
+    ]);
+    if (existingEmail) return res.status(409).json({ error: "email_already_registered" });
+    if (existingMobile) return res.status(409).json({ error: "mobile_already_registered" });
+
+    // Guard against legacy accounts that exist outside public.users.
+    const adminClient = getSupabaseAdmin();
+    const [profileByPhone, profileByEmail] = await Promise.all([
+      adminClient.from("profiles").select("id").eq("phone", mobile).maybeSingle(),
+      adminClient.from("profiles").select("id").ilike("contact_email", email).maybeSingle(),
+    ]);
+    if (profileByEmail.error) throw profileByEmail.error;
+    if (profileByPhone.error) throw profileByPhone.error;
+    if (profileByEmail.data) return res.status(409).json({ error: "email_already_registered" });
+    if (profileByPhone.data) return res.status(409).json({ error: "mobile_already_registered" });
+
+    const admin = getSupabaseAdmin();
+    const created = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      phone: mobile,
+      phone_confirm: true,
+      user_metadata: {
+        mobile,
+        contact_email: email,
+        auth_provider: "password",
+      },
+    });
+
+    if (created.error) {
+      const msg = String(created.error.message || "").toLowerCase();
+      if (/already|registered|exists/.test(msg)) {
+        if (msg.includes("phone")) return res.status(409).json({ error: "mobile_already_registered" });
+        return res.status(409).json({ error: "email_already_registered" });
+      }
+      throw created.error;
+    }
+
+    const user = created.data && created.data.user;
+    if (!user) throw new Error("user_create_failed");
+
+    const hashedPassword = hashPassword(password);
+    const { data: account, error: insertError } = await admin
+      .from("users")
+      .insert({
+        id: user.id,
+        email,
+        mobile,
+        hashed_password: hashedPassword,
+      })
+      .select("id, email, mobile, created_at")
+      .single();
+
+    if (insertError) {
+      // Avoid leaving an orphan auth user if the app table insert fails.
+      await admin.auth.admin.deleteUser(user.id).catch(() => {});
+      if (insertError.code === "23505") {
+        const detail = String(insertError.details || insertError.message || "").toLowerCase();
+        if (detail.includes("mobile")) return res.status(409).json({ error: "mobile_already_registered" });
+        return res.status(409).json({ error: "email_already_registered" });
+      }
+      throw insertError;
+    }
+
+    await ensureProfileForAccount(user.id, { phone: mobile, email });
+
+    const publicClient = getSupabasePublic();
+    const { data: signInData, error: signInError } = await publicClient.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (signInError || !signInData.session || !signInData.user) {
+      throw signInError || new Error("session_create_failed");
+    }
+
+    await noteLogin({ id: signInData.user.id, phone: mobile, email });
+    await trackActivity({
+      profileId: signInData.user.id,
+      eventType: "register",
+      description: "Created account with email and password",
+      status: "recorded",
+      dedupeKey: `register:${signInData.user.id}`,
+    });
+
+    res.status(201).json({
+      ...sessionResponse(signInData.session, signInData.user, account),
+      account: publicUserResponse(account),
+    });
+  } catch (err) {
+    if (err.status === 429) return res.status(429).json({ error: "too_many_requests" });
+    const msg = String(err.message || "");
+    if (err.code === "42P01" || msg.includes("Could not find the table 'public.users'")) {
+      console.error("register failed: users table missing", msg);
+      return res.status(503).json({ error: "registration_unavailable" });
+    }
+    next(err);
+  }
+});
+
+router.post("/login", otpLimiter, async (req, res, next) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const identifier = typeof body.identifier === "string" ? body.identifier : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!password) return res.status(400).json({ error: "invalid_credentials" });
+
+    const { type, value, user: account } = await findPublicUserByIdentifier(identifier);
+    if (!type || !value || !account) {
+      return res.status(401).json({ error: "invalid_credentials" });
+    }
+
+    if (!verifyPassword(password, account.hashed_password)) {
+      return res.status(401).json({ error: "invalid_credentials" });
+    }
+
+    const publicClient = getSupabasePublic();
+    let { data, error } = await publicClient.auth.signInWithPassword({
+      email: account.email,
+      password,
+    });
+
+    // Backward-compatible repair: if the app users table has the account but
+    // the Supabase Auth password is out of sync, reset it after hash verification.
+    if (error) {
+      const admin = getSupabaseAdmin();
+      const repaired = await admin.auth.admin.updateUserById(account.id, {
+        password,
+        email_confirm: true,
+        phone: account.mobile,
+        phone_confirm: true,
+        user_metadata: { mobile: account.mobile, contact_email: account.email, auth_provider: "password" },
+      });
+      if (!repaired.error) {
+        ({ data, error } = await publicClient.auth.signInWithPassword({
+          email: account.email,
+          password,
+        }));
+      }
+    }
+
+    if (error || !data.session || !data.user) {
+      return res.status(401).json({ error: "invalid_credentials" });
+    }
+
+    await ensureProfileForAccount(data.user.id, {
+      phone: account.mobile,
+      email: account.email,
+    });
+    await noteLogin({ id: data.user.id, phone: account.mobile, email: account.email });
+
+    res.json(sessionResponse(data.session, data.user, account));
+  } catch (err) {
+    if (err.status === 429) return res.status(429).json({ error: "too_many_requests" });
+    const msg = String(err.message || "");
+    if (err.code === "42P01" || msg.includes("Could not find the table 'public.users'")) {
+      console.error("login failed: users table missing", msg);
+      return res.status(503).json({ error: "registration_unavailable" });
+    }
     next(err);
   }
 });

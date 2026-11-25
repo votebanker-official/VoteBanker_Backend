@@ -234,11 +234,7 @@ async function fetchJson(url, options, fetchImpl = global.fetch) {
     error.providerError = typeof body.error === "string" ? body.error : "";
     error.providerDescription =
       typeof body.error_description === "string" ? body.error_description.slice(0, 180) : "";
-    // #region agent log
-    let providerHost = "";
-    try { providerHost = new URL(String(url)).host; } catch { providerHost = ""; }
-    fetch('http://127.0.0.1:7337/ingest/75959716-472f-4d0f-8b88-2b7d19c8618c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'90cc82'},body:JSON.stringify({sessionId:'90cc82',runId:'pre-fix',hypothesisId:'B-D',location:'social_auth.js:fetchJson',message:'provider rejected token exchange',data:{status:response.status,providerHost,providerError:error.providerError,providerDescription:error.providerDescription},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
+   
     throw error;
   }
   return body;
@@ -390,11 +386,8 @@ function titleName(value) {
     .slice(0, 120);
 }
 
-function googleDisplayName(name, given, email) {
-  const named = titleName(name || given);
-  if (named) return named;
-  const local = String(email || "").split("@")[0] || "";
-  return titleName(local.replace(/[._+]+/g, " "));
+function googleDisplayName(name, given, _email) {
+  return titleName(name || given);
 }
 
 async function googleProfileFromIdToken({ idToken, clientId, nonce, fetchImpl }) {

@@ -196,7 +196,13 @@ app.use((_req, res) => {
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
-  console.error(err.message);
+  console.error("server_error", {
+    message: err.message,
+    code: err.code,
+    detail: err.detail,
+    hint: err.hint,
+    stack: err.stack,
+  });
   res.status(500).json({ error: "server_error" });
 });
 

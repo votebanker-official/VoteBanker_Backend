@@ -297,7 +297,7 @@ test("google display name falls back to the email and keeps a google photo", asy
   assert.equal(profile.picture, "https://lh3.googleusercontent.com/a/rahul");
 });
 
-test("google name uses the email when the account has no display name", async () => {
+test("google profile without a display name does not derive name from email", async () => {
   const fetchImpl = async (url) => {
     if (String(url).includes("oauth2.googleapis.com/token")) {
       return { ok: true, async text() { return JSON.stringify({ access_token: "tok" }); } };
@@ -320,7 +320,7 @@ test("google name uses the email when the account has no display name", async ()
     clientSecret: "secret",
     fetchImpl,
   });
-  assert.equal(profile.name, "Leader Name");
+  assert.equal(profile.name, "");
   assert.equal(profile.picture, "");
 });
 

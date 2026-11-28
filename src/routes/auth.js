@@ -38,7 +38,17 @@ const otpLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "too_many_requests" },
-  skip: () => process.env.OTP_PROVIDER === "demo",
+  skip: (req) =>
+    process.env.OTP_PROVIDER === "demo" &&
+    !(req.body && req.body.purpose === "password_reset"),
+});
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "too_many_requests" },
 });
 
 const DEFAULT_COUNTRY_CODE = "+91";
@@ -107,6 +117,331 @@ function verifyPassword(password, storedHash) {
   const actual = crypto.scryptSync(password, salt, expected.length);
   if (actual.length !== expected.length) return false;
   return crypto.timingSafeEqual(actual, expected);
+}
+
+function unexpiredJwtPayload(token, now = Date.now()) {
+  if (typeof token !== "string") return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    if (!payload || typeof payload.exp !== "number" || payload.exp * 1000 <= now) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function hashPasswordResetToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function hasTwilioVerifyConfiguration() {
+  return Boolean(
+    process.env.TWILIO_ACCOUNT_SID &&
+      process.env.TWILIO_AUTH_TOKEN &&
+      process.env.TWILIO_VERIFY_SERVICE_SID,
+  );
+}
+
+function createPasswordResetOtpHandlers({
+  getAdmin = getSupabaseAdmin,
+  getVerifyService = verifyService,
+  isSmsConfigured = hasTwilioVerifyConfiguration,
+  now = () => Date.now(),
+  createToken = () => crypto.randomBytes(32).toString("hex"),
+  hashToken = hashPasswordResetToken,
+} = {}) {
+  async function findAccount(phone) {
+    const { data, error } = await getAdmin()
+      .from("users")
+      .select("id")
+      .eq("mobile", phone)
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  }
+
+  async function send(req, res, next) {
+    try {
+      const phone = normalizePhone(req.body && req.body.phone);
+      if (!phone) return res.status(400).json({ error: "invalid_phone" });
+      if (!isSmsConfigured()) {
+        return res.status(503).json({ error: "password_reset_sms_unavailable" });
+      }
+
+      const account = await findAccount(phone);
+      if (!account) return res.json({ status: "sent", channel: "sms" });
+
+      await getVerifyService().verifications.create({ to: phone, channel: "sms" });
+      res.json({ status: "sent", channel: "sms" });
+    } catch (err) {
+      if (err.status === 429) {
+        return res.status(429).json({ error: "too_many_requests" });
+      }
+      if (err.code === 21608 || /verified tester|unverified/i.test(err.message || "")) {
+        return res.status(403).json({ error: "number_not_verified" });
+      }
+      if (err.status === 400 || err.status === 404) {
+        console.error("password reset SMS unavailable", {
+          code: err.code || err.status,
+        });
+        return res.status(503).json({ error: "password_reset_sms_unavailable" });
+      }
+      next(err);
+    }
+  }
+
+  async function verify(req, res, next) {
+    try {
+      const phone = normalizePhone(req.body && req.body.phone);
+      const code = req.body && req.body.code;
+      if (!phone) return res.status(400).json({ error: "invalid_phone" });
+      if (typeof code !== "string" || !CODE.test(code)) {
+        return res.status(400).json({ error: "invalid_code" });
+      }
+      if (!isSmsConfigured()) {
+        return res.status(503).json({ error: "password_reset_sms_unavailable" });
+      }
+
+      const account = await findAccount(phone);
+      if (!account) return res.status(401).json({ error: "incorrect_code" });
+
+      const check = await getVerifyService().verificationChecks.create({
+        to: phone,
+        code,
+      });
+      if (check.status !== "approved") {
+        return res.status(401).json({ error: "incorrect_code" });
+      }
+
+      const token = createToken();
+      if (typeof token !== "string" || !/^[a-f0-9]{64}$/i.test(token)) {
+        throw new Error("invalid_password_reset_token");
+      }
+      const { error } = await getAdmin()
+        .from("users")
+        .update({
+          password_reset_token_hash: hashToken(token),
+          password_reset_expires_at: new Date(now() + 10 * 60 * 1000).toISOString(),
+        })
+        .eq("id", account.id);
+      if (error) throw error;
+
+      res.json({ status: "verified", reset_token: token });
+    } catch (err) {
+      if (err.status === 404) {
+        return res.status(401).json({ error: "code_expired" });
+      }
+      if (err.status === 429) {
+        return res.status(429).json({ error: "too_many_requests" });
+      }
+      if (err.status === 400) {
+        return res.status(401).json({ error: "incorrect_code" });
+      }
+      next(err);
+    }
+  }
+
+  return { send, verify };
+}
+
+function passwordResetRedirectUrl(req) {
+  const requestOrigin = req && typeof req.get === "function" ? req.get("origin") : "";
+  const localOrigin = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(
+    String(requestOrigin || ""),
+  );
+  const candidates = localOrigin
+    ? [requestOrigin, process.env.FRONTEND_URL]
+    : [process.env.FRONTEND_URL, requestOrigin];
+  candidates.push("https://votebanker-frontend.vercel.app");
+
+  for (const candidate of candidates) {
+    const safeOrigin = safeReturnTo(candidate);
+    if (safeOrigin) {
+      return `${safeOrigin.replace(/\/$/, "")}/forgot-password/new`;
+    }
+  }
+
+  const error = new Error("password_reset_redirect_unavailable");
+  error.code = "password_reset_redirect_unavailable";
+  throw error;
+}
+
+function createPasswordResetRouter({
+  getAdmin = getSupabaseAdmin,
+  getPublic = getSupabasePublic,
+  getRedirectUrl = passwordResetRedirectUrl,
+  now = () => Date.now(),
+  passwordHasher = hashPassword,
+} = {}) {
+  const resetRouter = express.Router();
+
+  resetRouter.post("/request", async (req, res, next) => {
+    try {
+      const email = normalizeEmail(req.body && req.body.email);
+      if (!email) return res.status(400).json({ error: "invalid_email" });
+
+      const admin = getAdmin();
+      const { data: account, error: lookupError } = await admin
+        .from("users")
+        .select("id")
+        .ilike("email", email)
+        .maybeSingle();
+      if (lookupError) throw lookupError;
+
+      if (account) {
+        const { error } = await getPublic().auth.resetPasswordForEmail(email, {
+          redirectTo: getRedirectUrl(req),
+        });
+        if (error) {
+          if (error.status === 429) {
+            return res.status(429).json({ error: "too_many_requests" });
+          }
+          console.error("password reset email failed", {
+            code: error.code || error.status || "email_service_error",
+          });
+          return res.status(503).json({ error: "password_reset_unavailable" });
+        }
+      }
+
+      res.json({ status: "requested" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  resetRouter.post("/complete", async (req, res, next) => {
+    try {
+      const body = req.body && typeof req.body === "object" ? req.body : {};
+      const password = typeof body.password === "string" ? body.password : "";
+      const confirmPassword =
+        typeof body.confirm_password === "string" ? body.confirm_password : "";
+      const passwordError = validatePassword(password);
+
+      if (passwordError) return res.status(400).json({ error: passwordError });
+      if (password !== confirmPassword) {
+        return res.status(400).json({ error: "password_mismatch" });
+      }
+
+      if (typeof body.reset_token === "string") {
+        if (!/^[a-f0-9]{64}$/i.test(body.reset_token)) {
+          return res.status(401).json({ error: "invalid_reset_link" });
+        }
+        const admin = getAdmin();
+        const { data: account, error } = await admin
+          .from("users")
+          .update({
+            hashed_password: passwordHasher(password),
+            password_reset_token_hash: null,
+            password_reset_expires_at: null,
+          })
+          .eq("password_reset_token_hash", hashPasswordResetToken(body.reset_token))
+          .gt("password_reset_expires_at", new Date(now()).toISOString())
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!account) return res.status(401).json({ error: "invalid_reset_link" });
+
+        const { error: authUpdateError } =
+          await admin.auth.admin.updateUserById(account.id, { password });
+        if (authUpdateError) {
+          console.error("phone password reset auth update failed", {
+            userId: account.id,
+            code: authUpdateError.code || authUpdateError.status || "auth_update_error",
+          });
+          return res.json({ status: "reset", auth_sync_pending: true });
+        }
+        return res.json({ status: "reset" });
+      }
+
+      const accessToken = body.access_token;
+      const refreshToken = body.refresh_token;
+      if (
+        typeof accessToken !== "string" ||
+        accessToken.length > 8192 ||
+        typeof refreshToken !== "string" ||
+        refreshToken.length > 8192
+      ) {
+        return res.status(401).json({ error: "invalid_reset_link" });
+      }
+      if (!unexpiredJwtPayload(accessToken, now())) {
+        return res.status(401).json({ error: "reset_link_expired" });
+      }
+
+      const publicClient = getPublic();
+      const { data: sessionData, error: sessionError } =
+        await publicClient.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+      if (sessionError || !sessionData || !sessionData.user) {
+        return res.status(401).json({ error: "invalid_reset_link" });
+      }
+
+      const admin = getAdmin();
+      const { data: account, error: accountError } = await admin
+        .from("users")
+        .select("id, hashed_password")
+        .eq("id", sessionData.user.id)
+        .maybeSingle();
+      if (accountError) throw accountError;
+      if (!account) return res.status(401).json({ error: "invalid_reset_link" });
+
+      const { error: hashError } = await admin
+        .from("users")
+        .update({ hashed_password: passwordHasher(password) })
+        .eq("id", account.id);
+      if (hashError) throw hashError;
+
+      const { error: passwordErrorFromAuth } =
+        await publicClient.auth.updateUser({ password });
+      if (passwordErrorFromAuth) {
+        const { error: rollbackError } = await admin
+          .from("users")
+          .update({ hashed_password: account.hashed_password })
+          .eq("id", account.id);
+        if (rollbackError) {
+          console.error("password reset hash rollback failed", {
+            userId: account.id,
+            code: rollbackError.code || "database_error",
+          });
+          return res.status(503).json({ error: "password_reset_unavailable" });
+        }
+        if (passwordErrorFromAuth.status === 401) {
+          return res.status(401).json({ error: "invalid_reset_link" });
+        }
+        console.error("password reset auth update failed", {
+          code:
+            passwordErrorFromAuth.code ||
+            passwordErrorFromAuth.status ||
+            "auth_update_error",
+        });
+        return res.status(503).json({ error: "password_reset_unavailable" });
+      }
+
+      const { error: signOutError } = await publicClient.auth.signOut({
+        scope: "global",
+      });
+      if (signOutError) {
+        console.error("password reset session revocation failed", {
+          userId: account.id,
+          code: signOutError.code || signOutError.status || "sign_out_error",
+        });
+        return res
+          .status(503)
+          .json({ error: "password_reset_session_revoke_failed" });
+      }
+
+      res.json({ status: "reset" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  return resetRouter;
 }
 
 async function findPublicUserByEmail(email) {
@@ -727,6 +1062,12 @@ router.post("/oauth/exchange", otpLimiter, (req, res) => {
 });
 
 router.post("/otp/send", otpLimiter, async (req, res, next) => {
+  if (req.body && req.body.purpose === "password_reset") {
+    return createPasswordResetOtpHandlers().send(req, res, next);
+  }
+  if (req.body && req.body.purpose) {
+    return res.status(400).json({ error: "invalid_otp_purpose" });
+  }
   try {
     const phone = normalizePhone(req.body && req.body.phone);
     if (!phone) return res.status(400).json({ error: "invalid_phone" });
@@ -766,6 +1107,12 @@ router.post("/otp/send", otpLimiter, async (req, res, next) => {
 });
 
 router.post("/otp/verify", otpLimiter, async (req, res, next) => {
+  if (req.body && req.body.purpose === "password_reset") {
+    return createPasswordResetOtpHandlers().verify(req, res, next);
+  }
+  if (req.body && req.body.purpose) {
+    return res.status(400).json({ error: "invalid_otp_purpose" });
+  }
   try {
     const phone = normalizePhone(req.body && req.body.phone);
     const code = req.body && req.body.code;
@@ -995,8 +1342,12 @@ router.post("/login", otpLimiter, async (req, res, next) => {
   }
 });
 
+router.use("/password-reset", passwordResetLimiter, createPasswordResetRouter());
+
 module.exports = router;
 module.exports.oauthCallback = oauthCallback;
+module.exports.createPasswordResetRouter = createPasswordResetRouter;
+module.exports.createPasswordResetOtpHandlers = createPasswordResetOtpHandlers;
 
 router.post("/session/end", async (req, res) => {
   const user = await authenticate(req);

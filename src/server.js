@@ -102,6 +102,8 @@ app.get("/", (_req, res) => {
       "GET /api/health",
       "POST /api/auth/otp/send",
       "POST /api/auth/otp/verify",
+      "POST /api/auth/password-reset/request",
+      "POST /api/auth/password-reset/complete",
       "GET /api/auth/oauth/:provider/start",
       "GET /api/auth/oauth/callback",
       "POST /api/auth/oauth/exchange",
